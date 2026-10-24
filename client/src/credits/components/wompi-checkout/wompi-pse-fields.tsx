@@ -57,6 +57,31 @@ export const WompiPseFields: React.FC<WompiPseFieldsProps> = ({
           onChange={(v) => onChange({ ...value, financialInstitutionCode: v })}
         />
       </div>
+      <Input
+        label="Nombre completo"
+        id="wompi-pse-full-name"
+        value={value.fullName}
+        onChange={(e) => onChange({ ...value, fullName: e.target.value })}
+      />
+      <Input
+        label="Celular"
+        id="wompi-pse-phone"
+        maxLength={10}
+        value={value.phone}
+        onChange={(e) => onChange({ ...value, phone: e.target.value.replace(/\D/g, "") })}
+      />
+      <Input
+        label="Dirección"
+        id="wompi-pse-address"
+        value={value.address}
+        onChange={(e) => onChange({ ...value, address: e.target.value })}
+      />
+      <Input
+        label="Ciudad"
+        id="wompi-pse-city"
+        value={value.city}
+        onChange={(e) => onChange({ ...value, city: e.target.value })}
+      />
     </div>
   );
 };

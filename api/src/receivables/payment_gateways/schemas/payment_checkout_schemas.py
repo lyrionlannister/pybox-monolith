@@ -42,6 +42,9 @@ class CardTransactionRequest(BaseSchema):
 
 
 class PseTransactionRequest(BaseSchema):
+    """`full_name`/`phone`/`address`/`city` son ignorados por Wompi pero obligatorios
+    para PayU y ePayco -- ver `PsePaymentMethod`."""
+
     payment_method_type: Literal["PSE"] = "PSE"
     user_type: int = Field(description="0 = persona natural, 1 = persona jurídica")
     user_legal_id_type: str
@@ -49,6 +52,10 @@ class PseTransactionRequest(BaseSchema):
     financial_institution_code: str
     payment_description: str
     customer_email: EmailStr
+    full_name: str | None = None
+    phone: str | None = None
+    address: str | None = None
+    city: str | None = None
     device_info: DeviceInfoRequest | None = None
 
 
@@ -76,6 +83,7 @@ class BancolombiaTransferTransactionRequest(BaseSchema):
     payment_description: str
     customer_email: EmailStr
     full_name: str | None = None
+    phone: str | None = None
     user_legal_id_type: str | None = None
     user_legal_id: str | None = None
     address: str | None = None
