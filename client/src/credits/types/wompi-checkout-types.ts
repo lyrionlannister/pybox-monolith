@@ -1,4 +1,4 @@
-export type WompiMethod = "NEQUI" | "PSE" | "CARD" | "BANCOLOMBIA_TRANSFER";
+export type WompiMethod = "NEQUI" | "PSE" | "CARD" | "BANCOLOMBIA_TRANSFER" | "DAVIPLATA";
 
 export type WompiAttemptStatus = "PENDING" | "APPROVED" | "DECLINED" | "ERROR" | "VOIDED";
 
@@ -30,4 +30,6 @@ export interface TransactionCreationResult {
   attempt: PaymentAttemptResult;
   threeDsChallenge: ThreeDsChallenge | null;
   redirectAction: RedirectAction | null;
+  /** Daviplata (ePayco): el cobro espera el OTP que llega a la app del deudor. */
+  otpRequired?: boolean;
 }

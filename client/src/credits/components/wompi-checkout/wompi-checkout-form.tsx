@@ -7,6 +7,7 @@ import { Select } from "@/ui/components/inputs/select";
 import { useToast } from "@/context/toast-context";
 import { useWompiCheckout } from "@/credits/hooks/use-wompi-checkout";
 import { captureWompiBrowserInfo } from "@/credits/utils/wompi-browser-info";
+import { capturePayuDeviceInfo } from "@/credits/utils/payu-device-info";
 import { formatCreditCurrency } from "@/credits/utils/financial-calendar-utils";
 import type { WompiCheckoutFormProps } from "@/credits/types/wompi-checkout-form-props";
 import type {
@@ -21,12 +22,14 @@ import { WompiCardFields } from "./wompi-card-fields";
 import { WompiPseFields } from "./wompi-pse-fields";
 import { WompiChallengePanel } from "./wompi-challenge-panel";
 import { PayuPayerFields } from "./payu-payer-fields";
+import { DaviplataOtpFields } from "./daviplata-otp-fields";
 
 const METHOD_OPTIONS: { value: WompiMethod; label: string }[] = [
   { value: "NEQUI", label: "Nequi" },
   { value: "PSE", label: "PSE (débito bancario)" },
   { value: "CARD", label: "Tarjeta de crédito o débito" },
   { value: "BANCOLOMBIA_TRANSFER", label: "Transferencia Bancolombia" },
+  { value: "DAVIPLATA", label: "Daviplata" },
 ];
 
 const POLL_INTERVAL_MS = 2500;
@@ -36,6 +39,7 @@ const WAITING_LABELS: Record<WompiMethod, string> = {
   PSE: "Estamos verificando tu pago con el banco...",
   CARD: "Verificando tu tarjeta con el banco...",
   BANCOLOMBIA_TRANSFER: "Completa la transferencia desde Bancolombia...",
+  DAVIPLATA: "Confirmando tu pago con Daviplata...",
 };
 
 const FINAL_STATUS_META: Record<string, { label: string; color: "success" | "error" | "warning" }> = {
@@ -51,8 +55,14 @@ export const WompiCheckoutForm: React.FC<WompiCheckoutFormProps> = ({
   onDone,
   onCancel,
 }) => {
-  const { createTransaction, listPseInstitutions, fetchAttemptStatus, submitting } =
-    useWompiCheckout(payment.id);
+  const {
+    createTransaction,
+    listPseInstitutions,
+    fetchAttemptStatus,
+    confirmDaviplataOtp,
+    submitting,
+    confirmingOtp,
+  } = useWompiCheckout(payment.id);
   const { success } = useToast();
 
   const [method, setMethod] = useState<WompiMethod | "">("");
@@ -63,14 +73,16 @@ export const WompiCheckoutForm: React.FC<WompiCheckoutFormProps> = ({
   const [pseFields, setPseFields] = useState<PseFieldsValue>({
     userType: "0", userLegalIdType: "CC", userLegalId: "", financialInstitutionCode: "", paymentDescription: "",
   });
-  const [nequiPhone, setNequiPhone] = useState("");
-  const [nequiPayerFields, setNequiPayerFields] = useState<PayuPayerFieldsValue>({
+  const [phone, setPhone] = useState("");
+  const [payerFields, setPayerFields] = useState<PayuPayerFieldsValue>({
     fullName: "", userLegalIdType: "CC", userLegalId: "", address: "", city: "",
   });
   const [institutions, setInstitutions] = useState<FinancialInstitution[]>([]);
   const [loadingInstitutions, setLoadingInstitutions] = useState(false);
   const [attempt, setAttempt] = useState<PaymentAttemptResult | null>(null);
   const [challengeHtml, setChallengeHtml] = useState<string | null>(null);
+  const [otpRequired, setOtpRequired] = useState(false);
+  const [otp, setOtp] = useState("");
 
   const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -84,7 +96,8 @@ export const WompiCheckoutForm: React.FC<WompiCheckoutFormProps> = ({
   }, [method]);
 
   useEffect(() => {
-    if (!attempt || attempt.status !== "PENDING") return;
+    // Mientras Daviplata espera el OTP no hay nada que consultar todavía.
+    if (!attempt || attempt.status !== "PENDING" || otpRequired) return;
     pollTimer.current = setTimeout(async () => {
       const next = await fetchAttemptStatus(attempt.id);
       if (next) setAttempt(next);
@@ -93,7 +106,7 @@ export const WompiCheckoutForm: React.FC<WompiCheckoutFormProps> = ({
       if (pollTimer.current) clearTimeout(pollTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attempt]);
+  }, [attempt, otpRequired]);
 
   useEffect(() => {
     if (attempt?.status === "APPROVED") {
@@ -105,21 +118,25 @@ export const WompiCheckoutForm: React.FC<WompiCheckoutFormProps> = ({
 
   const paymentDescription = `Pago cuota #${payment.installmentNumber ?? payment.id}`;
 
+  // PayU exige estos datos del pagador (Wompi/Bold los ignoran): se mandan si se
+  // llenaron, sin bloquear el envío cuando la organización usa otra pasarela.
+  const optionalPayer = () => ({
+    fullName: payerFields.fullName || undefined,
+    userLegalIdType: payerFields.userLegalIdType || undefined,
+    userLegalId: payerFields.userLegalId || undefined,
+    address: payerFields.address || undefined,
+    city: payerFields.city || undefined,
+  });
+
   const buildBody = (): Record<string, unknown> | null => {
     if (method === "NEQUI") {
-      if (!nequiPhone || !customerEmail) return null;
+      if (!phone || !customerEmail) return null;
       return {
         paymentMethodType: "NEQUI",
-        phoneNumber: nequiPhone,
+        phoneNumber: phone,
         customerEmail,
-        // PayU exige estos datos del pagador para NEQUI (Wompi los ignora, ver
-        // `NequiTransactionRequest`) -- se mandan si se llenaron, sin bloquear el
-        // envío cuando la organización usa Wompi.
-        fullName: nequiPayerFields.fullName || undefined,
-        userLegalIdType: nequiPayerFields.userLegalIdType || undefined,
-        userLegalId: nequiPayerFields.userLegalId || undefined,
-        address: nequiPayerFields.address || undefined,
-        city: nequiPayerFields.city || undefined,
+        ...optionalPayer(),
+        deviceInfo: capturePayuDeviceInfo(),
       };
     }
     if (method === "PSE") {
@@ -132,11 +149,33 @@ export const WompiCheckoutForm: React.FC<WompiCheckoutFormProps> = ({
         financialInstitutionCode: pseFields.financialInstitutionCode,
         paymentDescription,
         customerEmail,
+        deviceInfo: capturePayuDeviceInfo(),
       };
     }
     if (method === "BANCOLOMBIA_TRANSFER") {
       if (!customerEmail) return null;
-      return { paymentMethodType: "BANCOLOMBIA_TRANSFER", paymentDescription, customerEmail };
+      return {
+        paymentMethodType: "BANCOLOMBIA_TRANSFER",
+        paymentDescription,
+        customerEmail,
+        ...optionalPayer(),
+        deviceInfo: capturePayuDeviceInfo(),
+      };
+    }
+    if (method === "DAVIPLATA") {
+      const { fullName, userLegalIdType, userLegalId, address, city } = payerFields;
+      if (!customerEmail || !fullName || !userLegalId || !address || !city) return null;
+      return {
+        paymentMethodType: "DAVIPLATA",
+        customerEmail,
+        fullName,
+        userLegalIdType,
+        userLegalId,
+        address,
+        city,
+        phone: phone || undefined,
+        deviceInfo: capturePayuDeviceInfo(),
+      };
     }
     if (method === "CARD") {
       if (
@@ -174,6 +213,16 @@ export const WompiCheckoutForm: React.FC<WompiCheckoutFormProps> = ({
     }
     setAttempt(result.attempt);
     setChallengeHtml(result.threeDsChallenge?.challengeHtml ?? null);
+    setOtpRequired(Boolean(result.otpRequired));
+  };
+
+  const handleConfirmOtp = async () => {
+    if (!attempt || !otp) return;
+    const next = await confirmDaviplataOtp(attempt.id, otp);
+    if (!next) return;
+    setOtpRequired(false);
+    setOtp("");
+    setAttempt(next);
   };
 
   const isFinal = attempt && attempt.status !== "PENDING";
@@ -182,7 +231,15 @@ export const WompiCheckoutForm: React.FC<WompiCheckoutFormProps> = ({
   if (attempt) {
     return (
       <div className="flex flex-col gap-4">
-        {!isFinal && (
+        {!isFinal && otpRequired && (
+          <DaviplataOtpFields
+            otp={otp}
+            onChangeOtp={setOtp}
+            onConfirm={handleConfirmOtp}
+            confirming={confirmingOtp}
+          />
+        )}
+        {!isFinal && !otpRequired && (
           <WompiChallengePanel
             challengeHtml={challengeHtml}
             statusLabel={method ? WAITING_LABELS[method] : "Procesando el pago..."}
@@ -199,7 +256,12 @@ export const WompiCheckoutForm: React.FC<WompiCheckoutFormProps> = ({
                 <Button
                   type="button"
                   size="sm"
-                  onClick={() => { setAttempt(null); setChallengeHtml(null); }}
+                  onClick={() => {
+                    setAttempt(null);
+                    setChallengeHtml(null);
+                    setOtpRequired(false);
+                    setOtp("");
+                  }}
                 >
                   Intentar de nuevo
                 </Button>
@@ -245,14 +307,40 @@ export const WompiCheckoutForm: React.FC<WompiCheckoutFormProps> = ({
                 label="Número de celular Nequi"
                 id="wompi-nequi-phone"
                 maxLength={10}
-                value={nequiPhone}
-                onChange={(e) => setNequiPhone(e.target.value.replace(/\D/g, ""))}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
                 placeholder="3001234567"
               />
               <PayuPayerFields
-                value={nequiPayerFields}
-                onChange={setNequiPayerFields}
+                value={payerFields}
+                onChange={setPayerFields}
                 idPrefix="wompi-nequi-payer"
+              />
+            </>
+          )}
+
+          {method === "BANCOLOMBIA_TRANSFER" && (
+            <PayuPayerFields
+              value={payerFields}
+              onChange={setPayerFields}
+              idPrefix="wompi-bancolombia-payer"
+            />
+          )}
+
+          {method === "DAVIPLATA" && (
+            <>
+              <PayuPayerFields
+                value={payerFields}
+                onChange={setPayerFields}
+                idPrefix="wompi-daviplata-payer"
+              />
+              <Input
+                label="Celular Daviplata (opcional)"
+                id="wompi-daviplata-phone"
+                maxLength={10}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                placeholder="3001234567"
               />
             </>
           )}
