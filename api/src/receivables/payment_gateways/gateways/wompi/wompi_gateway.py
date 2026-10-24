@@ -8,6 +8,7 @@ from receivables.payment_gateways.gateways.base import (
     BancolombiaTransferPaymentMethod,
     BrowserInfo,
     CardPaymentMethod,
+    DeviceInfo,
     NequiPaymentMethod,
     PaymentMethodInput,
     PsePaymentMethod,
@@ -85,6 +86,7 @@ class WompiGateway:
         customer_email: str,
         payment_source_id: str | None = None,
         browser_info: BrowserInfo | None = None,
+        device_info: DeviceInfo | None = None,  # pylint: disable=unused-argument
     ) -> GatewayTransaction:
         signature = build_integrity_signature(
             reference, amount_in_cents, currency, self._integrity_secret
@@ -237,6 +239,12 @@ class WompiGateway:
             )
             for row in (response.get("data") or [])
         ]
+
+    async def confirm_daviplata_otp(
+        self, transaction_id: str, id_session_token: str, otp: str
+    ) -> GatewayTransaction:
+        """Solo ePayco tiene este concepto -- Wompi no tiene Daviplata."""
+        raise NotImplementedError("Wompi no soporta Daviplata.")
 
     async def get_transaction(self, transaction_id: str) -> GatewayTransaction:
         response = await self._client.get_transaction(

@@ -235,12 +235,15 @@ class ReceivablesPaymentGateway(Protocol):
         customer_email: str,
         payment_source_id: str | None = None,
         browser_info: BrowserInfo | None = None,
+        device_info: DeviceInfo | None = None,
     ) -> GatewayTransaction:
         """`payment_method` es obligatorio salvo cuando se cobra contra una fuente de
         pago guardada (`payment_source_id` presente, ver Paso 5.3 de la skill de
         Wompi) — en ese caso Wompi ignora `payment_method` y este se pasa en `None`.
         `payment_source_id` no aplica a pasarelas sin `supports_saved_payment_sources`.
-        `browser_info` se exige para CARD (3DS) y no aplica a los demás métodos."""
+        `browser_info` se exige para CARD (3DS) y no aplica a los demás métodos.
+        `device_info` lo exige PayU (antifraude) y ePayco (solo la IP); Wompi/Bold lo
+        ignoran."""
         ...
 
     async def tokenize_card(
@@ -274,6 +277,13 @@ class ReceivablesPaymentGateway(Protocol):
     ) -> list[GatewayFinancialInstitution]: ...
 
     async def get_transaction(self, transaction_id: str) -> GatewayTransaction: ...
+
+    async def confirm_daviplata_otp(
+        self, transaction_id: str, id_session_token: str, otp: str
+    ) -> GatewayTransaction:
+        """Solo ePayco tiene Daviplata (ver `OtpChallenge`); las demás pasarelas
+        levantan `NotImplementedError`."""
+        ...
 
     def verify_webhook_signature(self, event_body: dict[str, Any]) -> bool: ...
 

@@ -151,10 +151,12 @@ class TestCardThreeDsChallenge:
             attempt,
             challenge,
             redirect_action,
+            otp_challenge,
         ) = await service.create_transaction(
             session, payment.id, card, "debtor@example.com", browser_info=browser_info
         )
         assert redirect_action is None
+        assert otp_challenge is None
 
         assert attempt.status == ReceivablesPaymentAttemptStatus.PENDING
         assert attempt.charge_mode == ChargeMode.CHECKOUT

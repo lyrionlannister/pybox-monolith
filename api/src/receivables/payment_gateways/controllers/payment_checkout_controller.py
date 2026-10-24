@@ -2,7 +2,7 @@
 
 import uuid
 
-from fastapi import status
+from fastapi import Request, status
 
 from core.config.api_router import APIRouter
 from receivables.payment_gateways.dependencies import (
@@ -14,6 +14,8 @@ from receivables.payment_gateways.gateways.base import (
     BancolombiaTransferPaymentMethod,
     BrowserInfo,
     CardPaymentMethod,
+    DaviplataPaymentMethod,
+    DeviceInfo,
     NequiPaymentMethod,
     PaymentMethodInput,
     PsePaymentMethod,
@@ -21,6 +23,8 @@ from receivables.payment_gateways.gateways.base import (
 from receivables.payment_gateways.schemas.payment_checkout_schemas import (
     BancolombiaTransferTransactionRequest,
     CardTransactionRequest,
+    DaviplataOtpConfirmRequest,
+    DaviplataTransactionRequest,
     FinancialInstitutionResponse,
     NequiTransactionRequest,
     PaymentAttemptLookupResponse,
@@ -67,9 +71,46 @@ def _to_gateway_payment_method(body: TransactionRequest) -> PaymentMethodInput:
         )
     if isinstance(body, BancolombiaTransferTransactionRequest):
         return BancolombiaTransferPaymentMethod(
-            payment_description=body.payment_description
+            payment_description=body.payment_description,
+            full_name=body.full_name,
+            user_legal_id_type=body.user_legal_id_type,
+            user_legal_id=body.user_legal_id,
+            address=body.address,
+            city=body.city,
+        )
+    if isinstance(body, DaviplataTransactionRequest):
+        return DaviplataPaymentMethod(
+            user_legal_id_type=body.user_legal_id_type,
+            user_legal_id=body.user_legal_id,
+            full_name=body.full_name,
+            address=body.address,
+            city=body.city,
+            phone=body.phone,
         )
     raise ValueError(f"Tipo de método de pago no soportado: {type(body)!r}")
+
+
+def _to_device_info(body: TransactionRequest, request: Request) -> DeviceInfo | None:
+    """La IP sale de la petición (no del body): el cliente no puede falsearla."""
+    device_info = getattr(body, "device_info", None)
+    if device_info is None:
+        return None
+    return DeviceInfo(
+        device_session_id=device_info.device_session_id,
+        cookie=device_info.cookie,
+        user_agent=device_info.user_agent,
+        ip_address=request.client.host if request.client else "",
+    )
+
+
+def _to_attempt_response(attempt) -> PaymentAttemptResponse:
+    return PaymentAttemptResponse(
+        id=attempt.id,
+        status=attempt.status.value,
+        provider_reference=attempt.provider_reference,
+        provider_transaction_id=attempt.provider_transaction_id,
+        charge_mode=attempt.charge_mode.value,
+    )
 
 
 @router.post(
@@ -81,6 +122,7 @@ def _to_gateway_payment_method(body: TransactionRequest) -> PaymentMethodInput:
 async def create_transaction(
     payment_id: uuid.UUID,
     body: TransactionRequest,
+    request: Request,
     session: RequireSelfForPaymentGateways,
     service: PaymentCheckoutServiceDep,
 ) -> TransactionCreationResponse:
@@ -96,21 +138,21 @@ async def create_transaction(
         if isinstance(body, CardTransactionRequest)
         else None
     )
-    attempt, three_ds_challenge, redirect_action = await service.create_transaction(
+    (
+        attempt,
+        three_ds_challenge,
+        redirect_action,
+        otp_challenge,
+    ) = await service.create_transaction(
         session,
         payment_id,
         _to_gateway_payment_method(body),
         body.customer_email,
         browser_info=browser_info,
+        device_info=_to_device_info(body, request),
     )
     return TransactionCreationResponse(
-        attempt=PaymentAttemptResponse(
-            id=attempt.id,
-            status=attempt.status.value,
-            provider_reference=attempt.provider_reference,
-            provider_transaction_id=attempt.provider_transaction_id,
-            charge_mode=attempt.charge_mode.value,
-        ),
+        attempt=_to_attempt_response(attempt),
         three_ds_challenge=(
             ThreeDsChallengeResponse(
                 current_step=three_ds_challenge.current_step,
@@ -128,7 +170,26 @@ async def create_transaction(
             if redirect_action is not None
             else None
         ),
+        otp_required=otp_challenge is not None,
     )
+
+
+@router.post(
+    "/{payment_id}/transactions/{attempt_id}/daviplata/confirm-otp",
+    response_model=PaymentAttemptResponse,
+    summary="Confirmar un cobro Daviplata con el código OTP del deudor",
+)
+async def confirm_daviplata_otp(
+    payment_id: uuid.UUID,
+    attempt_id: uuid.UUID,
+    body: DaviplataOtpConfirmRequest,
+    session: RequireSelfForPaymentGateways,
+    service: PaymentCheckoutServiceDep,
+) -> PaymentAttemptResponse:
+    attempt = await service.confirm_daviplata_otp(
+        session, payment_id, attempt_id, body.otp
+    )
+    return _to_attempt_response(attempt)
 
 
 @router.get(
@@ -181,13 +242,7 @@ async def get_transaction_status(
     service: PaymentCheckoutServiceDep,
 ) -> PaymentAttemptResponse:
     attempt = await service.refresh_attempt_status(session, payment_id, attempt_id)
-    return PaymentAttemptResponse(
-        id=attempt.id,
-        status=attempt.status.value,
-        provider_reference=attempt.provider_reference,
-        provider_transaction_id=attempt.provider_transaction_id,
-        charge_mode=attempt.charge_mode.value,
-    )
+    return _to_attempt_response(attempt)
 
 
 @router.post(
