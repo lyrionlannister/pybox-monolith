@@ -77,8 +77,34 @@ env:
   PGADMIN_PASSWORD: "ci-password"
 
 jobs:
+  changes:
+    name: Detectar cambios
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      client: ${{ steps.filter.outputs.client }}
+      images: ${{ steps.filter.outputs.images }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'api/**'
+            client:
+              - 'client/**'
+            images:
+              - 'api/**'
+              - 'client/**'
+              - 'landing/**'
+              - 'nginx/**'
+
   api:
     name: API (black + pylint + pytest)
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -148,6 +174,8 @@ jobs:
     # este job valida que las migraciones de Alembic sí corren limpias desde cero,
     # igual que en un despliegue real.
     name: Migraciones Alembic en Postgres 17
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -183,6 +211,8 @@ jobs:
 
   client:
     name: Cliente (lint + pruebas + build)
+    needs: changes
+    if: needs.changes.outputs.client == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -222,6 +252,8 @@ jobs:
   imagenes:
     # Confirma que las imágenes de producción construyen; no publica nada.
     name: Imágenes de producción
+    needs: changes
+    if: needs.changes.outputs.images == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
