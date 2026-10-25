@@ -213,17 +213,21 @@ class SupportService:
 
     async def get_all_tickets(self, f: SupportFilter) -> list[SupportTicketSchema]:
         tickets = await self._ticket_repo.get_filtered(f)
-        result = []
-        for t in tickets:
-            result.append(await self._ticket_to_schema(t))
-        return result
+        org_ids = {t.organization_id for t in tickets if t.organization_id is not None}
+        org_names = {
+            o.id: o.name for o in await self._org_repo.get_by_ids(list(org_ids))
+        }
+        return [
+            self._ticket_to_schema(t, org_names.get(t.organization_id, ""))
+            for t in tickets
+        ]
 
     async def get_ticket(
         self, ticket_number: int, f: SupportFilter
     ) -> SupportTicketSchema:
         ticket = await self._get_ticket_or_404(ticket_number)
         self._assert_ticket_access(ticket, f, check_creator=True)
-        return await self._ticket_to_schema(ticket)
+        return await self._ticket_to_schema_one(ticket)
 
     async def resolve_ticket(
         self,
@@ -292,7 +296,7 @@ class SupportService:
             await self._resolve_identity_verification(ticket.created_by, data.approved)
 
         updated = await self._ticket_repo.update(ticket)
-        return await self._ticket_to_schema(updated)
+        return await self._ticket_to_schema_one(updated)
 
     def get_categories(self, session: UserSession) -> list[TicketCategorySchema]:
         # Categorías de autogestión de pago: SOLO visibles/creables por el titular
@@ -376,12 +380,8 @@ class SupportService:
             org_ids = await self._portfolio_access_repo.get_distinct_org_ids_by_user(
                 session.user_id
             )
-            result = []
-            for org_id in org_ids:
-                org = await self._org_repo.get_by_id(org_id)
-                if org:
-                    result.append(TicketOrgSchema(id=org.id, name=org.name))
-            return result
+            orgs = await self._org_repo.get_by_ids(list(org_ids))
+            return [TicketOrgSchema(id=org.id, name=org.name) for org in orgs]
         if session.orgs:
             return [
                 TicketOrgSchema(id=uuid.UUID(org_id), name=entry.org_name)
@@ -452,7 +452,7 @@ class SupportService:
         await self._emit_event(ticket, user_id, SupportTicketEventType.CREATED)
         await self._auto_assign(ticket, prefer_global=f.route_to_global)
 
-        return await self._ticket_to_schema(ticket)
+        return await self._ticket_to_schema_one(ticket)
 
     async def escalate_ticket(
         self, ticket_number: int, f: SupportFilter
@@ -480,7 +480,7 @@ class SupportService:
                 SupportTicketEventType.ESCALATED,
                 to_value=str(ticket.assigned_to),
             )
-        return await self._ticket_to_schema(ticket)
+        return await self._ticket_to_schema_one(ticket)
 
     async def get_org_docs(self, ticket_number: int, f: SupportFilter) -> OrgDocsSchema:
         if not (f.can_resolve or f.can_assign):
@@ -559,7 +559,7 @@ class SupportService:
             from_value=prev.value,
             to_value=data.status.value,
         )
-        return await self._ticket_to_schema(updated)
+        return await self._ticket_to_schema_one(updated)
 
     async def update_ticket_priority(
         self,
@@ -585,7 +585,7 @@ class SupportService:
             from_value=prev.value,
             to_value=data.priority.value,
         )
-        return await self._ticket_to_schema(updated)
+        return await self._ticket_to_schema_one(updated)
 
     async def assign_ticket(
         self,
@@ -822,9 +822,11 @@ class SupportService:
         *,
         check_creator: bool = False,
     ) -> None:
+        # 404 genérico, no 403: un 403 distinto de "no encontrado" deja distinguir
+        # por fuerza bruta qué `ticket_number` existen en el sistema (secuencial).
         if f.org_ids is not None and ticket.organization_id not in f.org_ids:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Acceso denegado."
+                status_code=status.HTTP_404_NOT_FOUND, detail="Ticket no encontrado."
             )
         if (
             check_creator
@@ -832,7 +834,7 @@ class SupportService:
             and ticket.created_by != f.created_by
         ):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Acceso denegado."
+                status_code=status.HTTP_404_NOT_FOUND, detail="Ticket no encontrado."
             )
 
     _ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".doc", ".pdf"}
@@ -1010,17 +1012,22 @@ class SupportService:
             link=f"/cs/tickets/{ticket.ticket_number}",
         )
 
-    async def _ticket_to_schema(
+    def _ticket_to_schema(
+        self, ticket: SupportTicketModel, org_name: str = ""
+    ) -> SupportTicketSchema:
+        schema = SupportTicketSchema.model_validate(ticket)
+        return schema.model_copy(
+            update={"organization_name": org_name, "topic": ticket.system_topic}
+        )
+
+    async def _ticket_to_schema_one(
         self, ticket: SupportTicketModel
     ) -> SupportTicketSchema:
         org_name = ""
         if ticket.organization_id is not None:
             org = await self._org_repo.get_by_id(ticket.organization_id)
             org_name = org.name if org else ""
-        schema = SupportTicketSchema.model_validate(ticket)
-        return schema.model_copy(
-            update={"organization_name": org_name, "topic": ticket.system_topic}
-        )
+        return self._ticket_to_schema(ticket, org_name)
 
     async def _notify_org_verification(
         self, org_id: uuid.UUID, ticket_created_by: uuid.UUID, approved: bool

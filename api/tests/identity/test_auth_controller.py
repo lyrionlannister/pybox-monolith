@@ -407,7 +407,9 @@ class TestForgotPassword:
             )
         assert resp.status_code == 204
 
-    async def test_send_code_unknown_document_returns_404(self, client):
+    async def test_send_code_unknown_document_returns_204_without_sending(self, client):
+        # Mismo criterio que el lookup (paso 1): respuesta uniforme exista o no la
+        # cuenta, para no servir de oráculo de documentos registrados.
         resp = await client.post(
             f"{BASE}/forgot-password/send-code",
             json={
@@ -416,7 +418,7 @@ class TestForgotPassword:
                 "channel": "EMAIL",
             },
         )
-        assert resp.status_code == 404
+        assert resp.status_code == 204
 
     async def test_verify_code_valid(self, client, db_session):
         payload = register_payload()

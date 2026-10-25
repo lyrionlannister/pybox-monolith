@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, func
 from sqlalchemy.dialects.postgresql import ENUM, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -13,6 +13,14 @@ from identity.auth.enums.notification_enums import VerificationChannel
 
 class VerificationCodeModel(BaseModel):
     __tablename__ = "codigos_verificacion"
+    __table_args__ = (
+        Index(
+            "ix_codigos_verificacion_usuario_canal_consumido",
+            "id_usuario",
+            "canal",
+            "consumido_en",
+        ),
+    )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

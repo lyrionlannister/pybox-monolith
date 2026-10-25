@@ -16,6 +16,7 @@ from app_platform.documents.utils.document_naming import (
     checksum,
     resolve_content_type,
     safe_original_name,
+    verify_magic_bytes,
 )
 from core.config.logger import logger
 from core.storage.object_storage import ObjectStorage, ObjectStorageError
@@ -69,6 +70,8 @@ class DocumentService:
         """
         content = await file.read()
         content_type = resolve_content_type(file.filename, file.content_type)
+        if content:
+            verify_magic_bytes(content, content_type)
 
         if not content:
             raise HTTPException(

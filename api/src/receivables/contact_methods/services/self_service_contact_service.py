@@ -1,5 +1,7 @@
 """Autogestión de métodos de contacto de un deudor (verificación por documento)."""
 
+import uuid
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app_platform.countries.enums.country_enums import UserDocumentType
@@ -70,14 +72,21 @@ class SelfServiceContactService:
         if not normalized:
             return False
 
+        existing_by_debtor: dict[uuid.UUID, set[str | None]] = {}
+        all_contacts = await self._contact_repo.get_by_debtor_ids(
+            [d.id for d in debtors]
+        )
+        for c in all_contacts:
+            if c.contact_type == contact_type:
+                existing_by_debtor.setdefault(c.debtor_id, set()).add(
+                    normalize_contact_value(
+                        contact_type, c.contact_value, country_prefix
+                    )
+                )
+
         created = False
         for debtor in debtors:
-            existing = {
-                normalize_contact_value(contact_type, c.contact_value, country_prefix)
-                for c in await self._contact_repo.get_by_debtor_id(debtor.id)
-                if c.contact_type == contact_type
-            }
-            if normalized in existing:
+            if normalized in existing_by_debtor.get(debtor.id, set()):
                 continue
 
             await self._contact_repo.add(

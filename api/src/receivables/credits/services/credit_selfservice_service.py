@@ -1,6 +1,7 @@
 """Autogestión de créditos del titular: solicitud de liquidación (settlement)."""
 
 import uuid
+from decimal import Decimal
 
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -131,10 +132,10 @@ class CreditSelfServiceService:
         return credit, portfolio.organization_id
 
     @staticmethod
-    def _settlement_amount(credit) -> float:
+    def _settlement_amount(credit) -> Decimal:
         """Monto total a saldar: saldo en mora + intereses corrientes + intereses de
         mora + otros conceptos."""
-        return float(
+        return (
             credit.overdue_principal_balance
             + credit.current_interest
             + credit.overdue_interest

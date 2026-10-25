@@ -29,6 +29,17 @@ class PortfolioCreditStats(NamedTuple):
 class CreditRepository(SoftDeleteRepositoryBase[CreditModel]):
     model_class = CreditModel
 
+    async def get_by_ids(self, credit_ids: list[uuid.UUID]) -> list[CreditModel]:
+        if not credit_ids:
+            return []
+        result = await self.session.execute(
+            select(CreditModel).where(
+                CreditModel.id.in_(credit_ids),
+                CreditModel.deleted_at.is_(None),
+            )
+        )
+        return list(result.scalars().all())
+
     async def get_portfolio_stats(
         self, portfolio_id: uuid.UUID
     ) -> PortfolioCreditStats:
@@ -263,6 +274,17 @@ class CreditRepository(SoftDeleteRepositoryBase[CreditModel]):
         )
         return list(result.scalars().all())
 
+    async def get_by_debtor_ids(self, debtor_ids: list[uuid.UUID]) -> list[CreditModel]:
+        if not debtor_ids:
+            return []
+        result = await self.session.execute(
+            select(CreditModel).where(
+                CreditModel.debtor_id.in_(debtor_ids),
+                CreditModel.deleted_at.is_(None),
+            )
+        )
+        return list(result.scalars().all())
+
     async def get_by_debtor_and_portfolio(
         self, debtor_id: uuid.UUID, portfolio_id: uuid.UUID
     ) -> list[CreditModel]:
@@ -279,6 +301,19 @@ class CreditRepository(SoftDeleteRepositoryBase[CreditModel]):
         result = await self.session.execute(
             select(CreditModel).where(
                 CreditModel.codebtor_id == codebtor_id,
+                CreditModel.deleted_at.is_(None),
+            )
+        )
+        return list(result.scalars().all())
+
+    async def get_by_codebtor_ids(
+        self, codebtor_ids: list[uuid.UUID]
+    ) -> list[CreditModel]:
+        if not codebtor_ids:
+            return []
+        result = await self.session.execute(
+            select(CreditModel).where(
+                CreditModel.codebtor_id.in_(codebtor_ids),
                 CreditModel.deleted_at.is_(None),
             )
         )

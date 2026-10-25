@@ -134,19 +134,50 @@ class PortfolioUserAccessService:
         user_ids: list[uuid.UUID],
         granted_by: uuid.UUID,
     ) -> list[PortfolioUserAccessModel]:
+        # Validado una sola vez: `grant_access`/`revoke_access` lo repiten por
+        # llamada (misma consulta, mismo portafolio) porque también se usan sueltos.
+        await self._require_portfolio_of_org(portfolio_id, organization_id)
+
+        memberships = await self._membership_repo.get_by_user_ids(user_ids)
+        member_user_ids = {
+            m.user_id for m in memberships if m.organization_id == organization_id
+        }
+        missing = [u for u in user_ids if u not in member_user_ids]
+        if missing:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Miembro no encontrado")
+
         existing = await self._repo.get_by_portfolio_id(portfolio_id)
         existing_by_user = {a.user_id: a for a in existing}
         new_set = set(user_ids)
+        now = datetime.utcnow()
 
         for user_id, access in existing_by_user.items():
             if user_id not in new_set and access.is_active:
-                await self.revoke_access(user_id, portfolio_id, organization_id)
+                access.is_active = False
+                access.revoked_at = now
+                await self._repo.update(access)
 
         result = []
         for user_id in user_ids:
-            access = await self.grant_access(
-                user_id, portfolio_id, organization_id, granted_by
+            access = existing_by_user.get(user_id)
+            if access is not None:
+                if not access.is_active:
+                    access.is_active = True
+                    access.revoked_at = None
+                    access.granted_by = granted_by
+                    access.granted_at = now
+                    access = await self._repo.update(access)
+                result.append(access)
+                continue
+            result.append(
+                await self._repo.add(
+                    PortfolioUserAccessModel(
+                        user_id=user_id,
+                        portfolio_id=portfolio_id,
+                        organization_id=organization_id,
+                        granted_by=granted_by,
+                    )
+                )
             )
-            result.append(access)
 
         return result

@@ -47,6 +47,7 @@ class SupportTicketModel(BaseModel):
         nullable=False,
         default=SupportTicketStatus.OPEN,
         name="estado",
+        index=True,
     )
     priority: Mapped[SupportTicketPriority] = mapped_column(
         ENUM(

@@ -100,15 +100,15 @@ class IvrReportService:
                 [
                     row.interaction_id,
                     row.phone,
-                    row.customer_name or "",
-                    row.customer_document or "",
+                    _csv_safe(row.customer_name),
+                    _csv_safe(row.customer_document),
                     str(row.status),
-                    row.outcome_label or "",
+                    _csv_safe(row.outcome_label),
                     row.outcome_key or "",
                     row.amd_status or "",
                     row.dial_status or "",
                     row.ivr_end_node_id or "",
-                    row.ivr_end_reason or "",
+                    _csv_safe(row.ivr_end_reason),
                     "si" if row.transferred else "no",
                     row.attempt_number,
                     row.duration_seconds if row.duration_seconds is not None else "",
@@ -122,3 +122,10 @@ class IvrReportService:
 
 def _iso(value) -> str:
     return value.isoformat() if value is not None else ""
+
+
+def _csv_safe(value: str | None) -> str:
+    """Antepone `'` a texto libre que empiece en =+-@: evita que Excel/Sheets lo
+    interprete como fórmula al abrir el CSV (CWE-1236)."""
+    text = value or ""
+    return f"'{text}" if text and text[0] in "=+-@" else text

@@ -34,6 +34,32 @@ def resolve_content_type(filename: str | None, declared_type: str | None = None)
     return content_type
 
 
+_MAGIC_BYTES: dict[str, tuple[bytes, ...]] = {
+    "application/pdf": (b"%PDF-",),
+    "image/png": (b"\x89PNG\r\n\x1a\n",),
+    "image/jpeg": (b"\xff\xd8\xff",),
+    "image/webp": (b"RIFF",),  # bytes 8-11 son "WEBP", ver verify_magic_bytes
+}
+
+
+def verify_magic_bytes(content: bytes, content_type: str) -> None:
+    """Confirma que el contenido real empiece con la firma esperada para
+    `content_type`, para que un archivo renombrado (ej. HTML con extensión .pdf) no
+    pase solo por tener la extensión correcta. Defensa en profundidad: los tipos
+    permitidos ya están acotados a PDF/PNG/JPG/WebP por `resolve_content_type`."""
+    signatures = _MAGIC_BYTES.get(content_type, ())
+    if not any(content.startswith(sig) for sig in signatures):
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "El contenido del archivo no corresponde a su tipo declarado",
+        )
+    if content_type == "image/webp" and content[8:12] != b"WEBP":
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "El contenido del archivo no corresponde a su tipo declarado",
+        )
+
+
 def checksum(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 

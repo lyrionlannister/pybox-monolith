@@ -22,6 +22,19 @@ class AddressRepository(SoftDeleteRepositoryBase[AddressModel]):
         )
         return list(result.scalars().all())
 
+    async def get_by_debtor_ids(
+        self, debtor_ids: list[uuid.UUID]
+    ) -> list[AddressModel]:
+        if not debtor_ids:
+            return []
+        result = await self.session.execute(
+            select(AddressModel).where(
+                AddressModel.debtor_id.in_(debtor_ids),
+                AddressModel.deleted_at.is_(None),
+            )
+        )
+        return list(result.scalars().all())
+
     async def soft_delete_by_organization(
         self, organization_id: uuid.UUID, deleted_at: datetime
     ) -> None:

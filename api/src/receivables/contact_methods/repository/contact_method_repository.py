@@ -23,6 +23,19 @@ class ContactMethodRepository(SoftDeleteRepositoryBase[ContactMethodModel]):
         )
         return list(result.scalars().all())
 
+    async def get_by_debtor_ids(
+        self, debtor_ids: list[uuid.UUID]
+    ) -> list[ContactMethodModel]:
+        if not debtor_ids:
+            return []
+        result = await self.session.execute(
+            select(ContactMethodModel).where(
+                ContactMethodModel.debtor_id.in_(debtor_ids),
+                ContactMethodModel.deleted_at.is_(None),
+            )
+        )
+        return list(result.scalars().all())
+
     async def get_values_by_debtors(
         self, debtor_ids: list[uuid.UUID], contact_type: ContactMethodType
     ) -> dict[uuid.UUID, str]:

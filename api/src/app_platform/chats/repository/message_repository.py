@@ -84,6 +84,21 @@ class MessageRepository(SoftDeleteRepositoryBase[MessageModel]):
         )
         await self.session.flush()
 
+    async def mark_read_many(
+        self, message_ids: list[uuid.UUID], user_id: uuid.UUID, now: datetime
+    ) -> None:
+        if not message_ids:
+            return
+        await self.session.execute(
+            update(MessageStatusModel)
+            .where(
+                MessageStatusModel.message_id.in_(message_ids),
+                MessageStatusModel.user_id == user_id,
+            )
+            .values(read_at=now)
+        )
+        await self.session.flush()
+
     async def get_unread_count(self, chat_id: uuid.UUID, user_id: uuid.UUID) -> int:
         result = await self.session.execute(
             select(func.count(MessageModel.id))

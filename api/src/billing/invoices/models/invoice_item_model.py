@@ -33,7 +33,11 @@ class InvoiceItemModel(BaseModel):
         String(255), nullable=False, name="nombre_campania"
     )
     channel_id: Mapped[uuid.UUID] = mapped_column(
-        PgUUID(as_uuid=True), nullable=False, name="canal_id"
+        PgUUID(as_uuid=True),
+        ForeignKey("canales.id", ondelete="SET NULL"),
+        nullable=True,
+        name="canal_id",
+        index=True,
     )
     channel_name: Mapped[str] = mapped_column(
         String(100), nullable=False, name="nombre_canal"

@@ -33,39 +33,48 @@ class TestMe:
 
 
 class TestProfilePhoto:
+    # Firma real de PNG: `verify_magic_bytes` (document_naming.py) exige que el
+    # contenido empiece con los 8 bytes de la firma, no solo que diga ser PNG.
+    PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+
     async def test_upload_valid(self, client, real_user):
         resp = await client.put(
             f"{BASE}/me/profile-photo",
-            files={"file": ("avatar.png", b"\x89PNG fake bytes", "image/png")},
+            files={
+                "file": ("avatar.png", self.PNG_SIGNATURE + b"fake bytes", "image/png")
+            },
         )
         assert resp.status_code == 200
         assert resp.json()["profilePhotoUrl"] is not None
 
     async def test_get_content_valid_after_upload(self, client, real_user):
+        content = self.PNG_SIGNATURE + b"fake bytes"
         await client.put(
             f"{BASE}/me/profile-photo",
-            files={"file": ("avatar.png", b"\x89PNG fake bytes", "image/png")},
+            files={"file": ("avatar.png", content, "image/png")},
         )
 
         resp = await client.get(f"{BASE}/{real_user.id}/profile-photo/content")
         assert resp.status_code == 200
-        assert resp.content == b"\x89PNG fake bytes"
+        assert resp.content == content
 
     async def test_upload_replaces_previous_photo(self, client, real_user):
+        first_content = self.PNG_SIGNATURE + b"primera foto"
         first = await client.put(
             f"{BASE}/me/profile-photo",
-            files={"file": ("avatar.png", b"primera foto", "image/png")},
+            files={"file": ("avatar.png", first_content, "image/png")},
         )
         assert first.status_code == 200
 
+        second_content = self.PNG_SIGNATURE + b"segunda foto"
         second = await client.put(
             f"{BASE}/me/profile-photo",
-            files={"file": ("avatar2.png", b"segunda foto", "image/png")},
+            files={"file": ("avatar2.png", second_content, "image/png")},
         )
         assert second.status_code == 200
 
         resp = await client.get(f"{BASE}/{real_user.id}/profile-photo/content")
-        assert resp.content == b"segunda foto"
+        assert resp.content == second_content
 
     async def test_get_content_without_photo_returns_404(self, client, real_user):
         resp = await client.get(f"{BASE}/{real_user.id}/profile-photo/content")

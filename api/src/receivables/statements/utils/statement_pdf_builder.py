@@ -3,6 +3,7 @@
 import io
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -16,9 +17,9 @@ class StatementPaymentLine:
     installment_number: int | None
     limit_pay_date: datetime
     payment_date: datetime | None
-    payment_amount: float
-    principal_payment: float
-    total_interest_amount: float
+    payment_amount: Decimal
+    principal_payment: Decimal
+    total_interest_amount: Decimal
     status_label: str
 
 
@@ -27,15 +28,15 @@ class StatementCreditLine:
     credit_number: str
     credit_type_label: str
     disbursed_date: datetime
-    total_credit_balance: float
-    overdue_principal_balance: float
+    total_credit_balance: Decimal
+    overdue_principal_balance: Decimal
     days_overdue_at_cutoff: int
     pending_installments: int
     overdue_installments: int
     payments: list[StatementPaymentLine]
 
 
-def _money(value: float, currency_code: str) -> str:
+def _money(value: Decimal, currency_code: str) -> str:
     return f"{currency_code} {value:,.2f}"
 
 

@@ -36,8 +36,9 @@ def make_campaign(**overrides) -> MagicMock:
     return campaign
 
 
-def make_channel(name: ChannelName) -> MagicMock:
+def make_channel(name: ChannelName, channel_id: uuid.UUID | None = None) -> MagicMock:
     channel = MagicMock()
+    channel.id = channel_id or uuid.uuid4()
     channel.name = name
     return channel
 
@@ -73,12 +74,11 @@ class TestCountForCampaignsGrouping:
             segment_id=segment_id, channel_id=uuid.uuid4()
         )
 
-        channel_repo.get_by_id = AsyncMock(
-            side_effect=lambda cid: (
-                make_channel(ChannelName.SMS)
-                if cid == campaign_sms.channel_id
-                else make_channel(ChannelName.WHATSAPP)
-            )
+        channel_repo.get_all = AsyncMock(
+            return_value=[
+                make_channel(ChannelName.SMS, campaign_sms.channel_id),
+                make_channel(ChannelName.WHATSAPP, campaign_whatsapp.channel_id),
+            ]
         )
         segment_repo.get_by_id = AsyncMock(return_value=make_segment(portfolio_id))
         portfolio_repo.get_by_id = AsyncMock(
@@ -112,7 +112,12 @@ class TestCountForCampaignsGrouping:
         campaign_a = make_campaign()
         campaign_b = make_campaign()
 
-        channel_repo.get_by_id = AsyncMock(return_value=make_channel(ChannelName.SMS))
+        channel_repo.get_all = AsyncMock(
+            return_value=[
+                make_channel(ChannelName.SMS, campaign_a.channel_id),
+                make_channel(ChannelName.SMS, campaign_b.channel_id),
+            ]
+        )
         segment_repo.get_by_id = AsyncMock(return_value=make_segment(portfolio_id))
         portfolio_repo.get_by_id = AsyncMock(
             return_value=MagicMock(organization_id=uuid.uuid4())
@@ -142,7 +147,7 @@ class TestCountForCampaignsZeroCases:
         counts = await service.count_for_campaigns([campaign])
 
         assert counts == {campaign.id: 0}
-        channel_repo.get_by_id.assert_not_awaited()
+        channel_repo.get_all.assert_not_awaited()
         dml.execute_query.assert_not_awaited()
 
     async def test_unknown_channel_counts_zero(self):
@@ -155,7 +160,7 @@ class TestCountForCampaignsZeroCases:
             portfolio_repo,
         ) = make_service()
         campaign = make_campaign()
-        channel_repo.get_by_id = AsyncMock(return_value=None)
+        channel_repo.get_all = AsyncMock(return_value=[])
 
         counts = await service.count_for_campaigns([campaign])
 
@@ -172,7 +177,9 @@ class TestCountForCampaignsZeroCases:
             portfolio_repo,
         ) = make_service()
         campaign = make_campaign()
-        channel_repo.get_by_id = AsyncMock(return_value=make_channel(ChannelName.SMS))
+        channel_repo.get_all = AsyncMock(
+            return_value=[make_channel(ChannelName.SMS, campaign.channel_id)]
+        )
         segment_repo.get_by_id = AsyncMock(return_value=None)
 
         counts = await service.count_for_campaigns([campaign])
@@ -189,7 +196,9 @@ class TestCountForCampaignsZeroCases:
             portfolio_repo,
         ) = make_service()
         campaign = make_campaign()
-        channel_repo.get_by_id = AsyncMock(return_value=make_channel(ChannelName.SMS))
+        channel_repo.get_all = AsyncMock(
+            return_value=[make_channel(ChannelName.SMS, campaign.channel_id)]
+        )
         segment_repo.get_by_id = AsyncMock(return_value=make_segment(uuid.uuid4()))
         portfolio_repo.get_by_id = AsyncMock(
             return_value=MagicMock(organization_id=uuid.uuid4())
@@ -212,7 +221,9 @@ class TestCountForCampaignsZeroCases:
             portfolio_repo,
         ) = make_service()
         campaign = make_campaign()
-        channel_repo.get_by_id = AsyncMock(return_value=make_channel(ChannelName.SMS))
+        channel_repo.get_all = AsyncMock(
+            return_value=[make_channel(ChannelName.SMS, campaign.channel_id)]
+        )
         segment_repo.get_by_id = AsyncMock(return_value=make_segment(uuid.uuid4()))
         portfolio_repo.get_by_id = AsyncMock(
             return_value=MagicMock(organization_id=uuid.uuid4())
@@ -237,7 +248,9 @@ class TestCountDeduplicatesContactValues:
         ) = make_service()
         campaign = make_campaign()
         debtor_a, debtor_b = uuid.uuid4(), uuid.uuid4()
-        channel_repo.get_by_id = AsyncMock(return_value=make_channel(ChannelName.SMS))
+        channel_repo.get_all = AsyncMock(
+            return_value=[make_channel(ChannelName.SMS, campaign.channel_id)]
+        )
         segment_repo.get_by_id = AsyncMock(return_value=make_segment(uuid.uuid4()))
         portfolio_repo.get_by_id = AsyncMock(
             return_value=MagicMock(organization_id=uuid.uuid4())
@@ -273,7 +286,12 @@ class TestCountCaching:
         segment_id = uuid.uuid4()
         campaign1 = make_campaign(segment_id=segment_id)
         campaign2 = make_campaign(segment_id=segment_id)
-        channel_repo.get_by_id = AsyncMock(return_value=make_channel(ChannelName.SMS))
+        channel_repo.get_all = AsyncMock(
+            return_value=[
+                make_channel(ChannelName.SMS, campaign1.channel_id),
+                make_channel(ChannelName.SMS, campaign2.channel_id),
+            ]
+        )
         segment_repo.get_by_id = AsyncMock(return_value=make_segment(uuid.uuid4()))
         portfolio_repo.get_by_id = AsyncMock(
             return_value=MagicMock(organization_id=uuid.uuid4())

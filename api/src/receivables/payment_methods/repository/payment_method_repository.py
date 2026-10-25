@@ -33,3 +33,17 @@ class PaymentMethodRepository(SoftDeleteRepositoryBase[PaymentMethodModel]):
             )
         )
         return list(result.scalars().all())
+
+    async def get_active_by_organization_ids(
+        self, organization_ids: list[uuid.UUID]
+    ) -> list[PaymentMethodModel]:
+        if not organization_ids:
+            return []
+        result = await self.session.execute(
+            select(PaymentMethodModel).where(
+                PaymentMethodModel.organization_id.in_(organization_ids),
+                PaymentMethodModel.is_active.is_(True),
+                PaymentMethodModel.deleted_at.is_(None),
+            )
+        )
+        return list(result.scalars().all())

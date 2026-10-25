@@ -10,6 +10,7 @@ from core.config.exception_response_middleware import ExceptionResponseMiddlewar
 from core.config.lifespan import lifespan
 from core.config.logging_middleware import LoggingMiddleware
 from core.config.routers import register_routers
+from core.config.security_headers_middleware import SecurityHeadersMiddleware
 from core.tools.config_tools import get_or_throw
 
 app = FastAPI(
@@ -42,6 +43,7 @@ app.add_middleware(
 )
 
 app.add_middleware(LoggingMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 register_error_handlers(app)
 
 register_routers(app)

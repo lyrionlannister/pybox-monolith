@@ -95,10 +95,13 @@ class StatementService:
         currency_code = await self._country_repo.get_currency_code(portfolio.country)
         cutoff_date = datetime.now(timezone.utc)
 
-        lines: list[StatementCreditLine] = []
-        for credit in credits:
-            payments = await self._payment_repo.get_by_credit_id(credit.id)
-            lines.append(self._to_credit_line(credit, payments))
+        payments_by_credit: dict[uuid.UUID, list] = {}
+        for p in await self._payment_repo.get_by_credit_ids([c.id for c in credits]):
+            payments_by_credit.setdefault(p.credit_id, []).append(p)
+        lines = [
+            self._to_credit_line(credit, payments_by_credit.get(credit.id, []))
+            for credit in credits
+        ]
 
         pdf_bytes = build_statement_pdf(
             organization_name=org_name,
@@ -235,8 +238,8 @@ class StatementService:
                 credit.credit_type, credit.credit_type.value
             ),
             disbursed_date=credit.disbursed_date,
-            total_credit_balance=float(credit.total_credit_balance),
-            overdue_principal_balance=float(credit.overdue_principal_balance),
+            total_credit_balance=credit.total_credit_balance,
+            overdue_principal_balance=credit.overdue_principal_balance,
             days_overdue_at_cutoff=credit.days_overdue_at_cutoff,
             pending_installments=credit.pending_installments,
             overdue_installments=credit.overdue_installments,
@@ -245,9 +248,9 @@ class StatementService:
                     installment_number=p.installment_number,
                     limit_pay_date=p.limit_pay_date,
                     payment_date=p.payment_date,
-                    payment_amount=float(p.payment_amount),
-                    principal_payment=float(p.principal_payment),
-                    total_interest_amount=float(p.total_interest_amount),
+                    payment_amount=p.payment_amount,
+                    principal_payment=p.principal_payment,
+                    total_interest_amount=p.total_interest_amount,
                     status_label=PAYMENT_STATUS_LABELS.get(p.status, p.status.value),
                 )
                 for p in payments
@@ -329,11 +332,10 @@ class StatementService:
         org_names = {o.id: o.name for o in orgs}
 
         credit_ids = [s.credit_id for s in statements if s.credit_id is not None]
-        credit_numbers: dict[uuid.UUID, str] = {}
-        for cid in credit_ids:
-            credit = await self._credit_repo.get_by_id(cid)
-            if credit is not None:
-                credit_numbers[cid] = credit.credit_number
+        credit_numbers = {
+            c.id: c.credit_number
+            for c in await self._credit_repo.get_by_ids(credit_ids)
+        }
 
         items = [
             StatementResponse(

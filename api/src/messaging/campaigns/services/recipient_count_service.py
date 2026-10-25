@@ -11,6 +11,7 @@ from core.config.logger import logger
 from messaging.campaigns.constants.channel_contact_constants import CHANNEL_CONTACT_TYPE
 from messaging.campaigns.models.campaign_model import CampaignModel
 from messaging.campaigns.utils.segment_utils import extract_debtor_ids
+from messaging.channels.models.channel_model import ChannelModel
 from messaging.channels.repository.channel_repository import ChannelRepository
 from receivables.contact_methods.enums.contact_method_enums import ContactMethodType
 from receivables.contact_methods.repository.contact_method_repository import (
@@ -59,9 +60,14 @@ class RecipientCountService:
         """
         counts: dict[uuid.UUID, int] = {}
         groups: dict[tuple[uuid.UUID, ContactMethodType], list[uuid.UUID]] = {}
+        channels_by_id = (
+            {c.id: c for c in await self._channel_repo.get_all()}
+            if any(c.segment_id is not None for c in campaigns)
+            else {}
+        )
 
         for campaign in campaigns:
-            key = await self._group_key(campaign)
+            key = self._group_key(campaign, channels_by_id)
             if key is None:
                 counts[campaign.id] = 0
                 continue
@@ -74,13 +80,15 @@ class RecipientCountService:
 
         return counts
 
-    async def _group_key(
-        self, campaign: CampaignModel
+    def _group_key(
+        self,
+        campaign: CampaignModel,
+        channels_by_id: dict[uuid.UUID, ChannelModel],
     ) -> tuple[uuid.UUID, ContactMethodType] | None:
         if campaign.segment_id is None:
             return None
 
-        channel = await self._channel_repo.get_by_id(campaign.channel_id)
+        channel = channels_by_id.get(campaign.channel_id)
         if channel is None:
             logger.warning(
                 "[recipient_count] campaña %s: canal %s no encontrado",
