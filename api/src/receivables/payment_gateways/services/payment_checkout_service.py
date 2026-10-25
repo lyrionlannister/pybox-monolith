@@ -13,7 +13,9 @@ from receivables.payment_gateways.enums.payment_gateway_enums import (
 )
 from receivables.payment_gateways.gateways.base import (
     BrowserInfo,
+    DeviceInfo,
     GatewayFinancialInstitution,
+    OtpChallenge,
     PaymentMethodInput,
     RedirectAction,
     ThreeDsChallenge,
@@ -66,10 +68,12 @@ class PaymentCheckoutService:
         payment_method: PaymentMethodInput,
         customer_email: str,
         browser_info: BrowserInfo | None = None,
+        device_info: DeviceInfo | None = None,
     ) -> tuple[
         CreditPaymentAttemptModel,
         ThreeDsChallenge | None,
         RedirectAction | None,
+        OtpChallenge | None,
     ]:
         (
             payment,
@@ -102,6 +106,7 @@ class PaymentCheckoutService:
             accept_personal_auth=tokens.personal_data_token,
             customer_email=customer_email,
             browser_info=browser_info,
+            device_info=device_info,
         )
 
         attempt = await self._attempt_repo.add(
@@ -120,7 +125,12 @@ class PaymentCheckoutService:
                 accepted_at=datetime.now(timezone.utc),
             )
         )
-        return attempt, transaction.three_ds_challenge, transaction.redirect_action
+        return (
+            attempt,
+            transaction.three_ds_challenge,
+            transaction.redirect_action,
+            transaction.otp_challenge,
+        )
 
     async def resolve_by_reference(
         self, session: UserSession, reference: str
@@ -166,6 +176,62 @@ class PaymentCheckoutService:
                 "Esta organización no tiene una pasarela de pago configurada.",
             )
         return await gateway.list_pse_financial_institutions()
+
+    async def confirm_daviplata_otp(
+        self,
+        session: UserSession,
+        payment_id: uuid.UUID,
+        attempt_id: uuid.UUID,
+        otp: str,
+    ) -> CreditPaymentAttemptModel:
+        """Segundo paso de Daviplata (ePayco, ver `OtpChallenge`). El `idSessionToken`
+        se lee del payload guardado al crear el intento -- nunca viaja al cliente."""
+        (
+            payment,
+            _credit,
+            portfolio,
+        ) = await self._ownership_resolver.resolve_owned_payment(
+            session, payment_id, require_pending=False
+        )
+        attempt = await self._attempt_repo.get_by_id(attempt_id)
+        # 404 generico, mismo criterio IDOR que `refresh_attempt_status`.
+        if attempt is None or attempt.payment_id != payment.id:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, "Intento de pago no encontrado."
+            )
+        if attempt.status != ReceivablesPaymentAttemptStatus.PENDING:
+            return attempt
+
+        transaction_data = ((attempt.provider_payload or {}).get("data") or {}).get(
+            "transaction"
+        ) or {}
+        id_session_token = transaction_data.get("idSessionToken")
+        if (
+            attempt.provider != ReceivablesGatewayProvider.EPAYCO
+            or not id_session_token
+            or not attempt.provider_transaction_id
+        ):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Este intento de pago no espera un código de Daviplata.",
+            )
+
+        gateway = await self._gateway_resolver.get_active_for_organization(
+            portfolio.organization_id
+        )
+        if gateway is None or gateway.name != attempt.provider.value:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "La pasarela de este intento ya no está activa.",
+            )
+
+        transaction = await gateway.confirm_daviplata_otp(
+            attempt.provider_transaction_id, str(id_session_token), otp
+        )
+        await sync_attempt_with_transaction(
+            attempt, transaction, self._attempt_repo, self._payment_repo
+        )
+        return attempt
 
     async def refresh_attempt_status(
         self, session: UserSession, payment_id: uuid.UUID, attempt_id: uuid.UUID

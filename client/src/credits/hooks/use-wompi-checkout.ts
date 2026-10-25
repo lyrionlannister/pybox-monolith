@@ -15,6 +15,7 @@ import type {
 export const useWompiCheckout = (paymentId: string) => {
   const { apiClient } = useApiClient();
   const [submitting, setSubmitting] = useState(false);
+  const [confirmingOtp, setConfirmingOtp] = useState(false);
 
   const createTransaction = async (
     body: Record<string, unknown>,
@@ -54,5 +55,29 @@ export const useWompiCheckout = (paymentId: string) => {
     }
   };
 
-  return { createTransaction, listPseInstitutions, fetchAttemptStatus, submitting };
+  const confirmDaviplataOtp = async (
+    attemptId: string,
+    otp: string,
+  ): Promise<PaymentAttemptResult | null> => {
+    setConfirmingOtp(true);
+    try {
+      return await apiClient<PaymentAttemptResult>(
+        `/credits/payments/${paymentId}/transactions/${attemptId}/daviplata/confirm-otp`,
+        { method: "POST", body: JSON.stringify({ otp }) },
+      );
+    } catch {
+      return null;
+    } finally {
+      setConfirmingOtp(false);
+    }
+  };
+
+  return {
+    createTransaction,
+    listPseInstitutions,
+    fetchAttemptStatus,
+    confirmDaviplataOtp,
+    submitting,
+    confirmingOtp,
+  };
 };

@@ -20,6 +20,15 @@ class BrowserInfoRequest(BaseSchema):
     browser_tz: str
 
 
+class DeviceInfoRequest(BaseSchema):
+    """Antifraude exigido por PayU (ver `DeviceInfo`). La IP no viaja aquí: el backend
+    la toma de la petición, nunca del cliente."""
+
+    device_session_id: str
+    cookie: str
+    user_agent: str
+
+
 class CardTransactionRequest(BaseSchema):
     payment_method_type: Literal["CARD"] = "CARD"
     number: str
@@ -40,6 +49,7 @@ class PseTransactionRequest(BaseSchema):
     financial_institution_code: str
     payment_description: str
     customer_email: EmailStr
+    device_info: DeviceInfoRequest | None = None
 
 
 class NequiTransactionRequest(BaseSchema):
@@ -55,12 +65,41 @@ class NequiTransactionRequest(BaseSchema):
     user_legal_id: str | None = None
     address: str | None = None
     city: str | None = None
+    device_info: DeviceInfoRequest | None = None
 
 
 class BancolombiaTransferTransactionRequest(BaseSchema):
+    """Mismos campos opcionales del pagador que `NequiTransactionRequest`: Wompi/Bold
+    los ignoran, PayU los exige."""
+
     payment_method_type: Literal["BANCOLOMBIA_TRANSFER"] = "BANCOLOMBIA_TRANSFER"
     payment_description: str
     customer_email: EmailStr
+    full_name: str | None = None
+    user_legal_id_type: str | None = None
+    user_legal_id: str | None = None
+    address: str | None = None
+    city: str | None = None
+    device_info: DeviceInfoRequest | None = None
+
+
+class DaviplataTransactionRequest(BaseSchema):
+    """Solo ePayco. El cobro queda `PENDING` hasta confirmar el OTP que llega a la app
+    Daviplata del deudor (ver `DaviplataOtpConfirmRequest`)."""
+
+    payment_method_type: Literal["DAVIPLATA"] = "DAVIPLATA"
+    customer_email: EmailStr
+    full_name: str
+    user_legal_id_type: str
+    user_legal_id: str
+    address: str
+    city: str
+    phone: str | None = None
+    device_info: DeviceInfoRequest | None = None
+
+
+class DaviplataOtpConfirmRequest(BaseSchema):
+    otp: str = Field(min_length=4, max_length=8, pattern=r"^\d+$")
 
 
 TransactionRequest = Annotated[
@@ -69,6 +108,7 @@ TransactionRequest = Annotated[
         PseTransactionRequest,
         NequiTransactionRequest,
         BancolombiaTransferTransactionRequest,
+        DaviplataTransactionRequest,
     ],
     Field(discriminator="payment_method_type"),
 ]
@@ -102,6 +142,7 @@ class TransactionCreationResponse(BaseSchema):
     attempt: PaymentAttemptResponse
     three_ds_challenge: ThreeDsChallengeResponse | None = None
     redirect_action: RedirectActionResponse | None = None
+    otp_required: bool = False
 
 
 class TokenizeCardSourceRequest(BaseSchema):
