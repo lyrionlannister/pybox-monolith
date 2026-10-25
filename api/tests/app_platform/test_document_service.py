@@ -25,6 +25,10 @@ from core.storage.object_storage import (
     ObjectStorageError,
 )
 
+# Firma real de PDF: `verify_magic_bytes` (document_naming.py) exige que el
+# contenido empiece así, no solo que la extensión sea .pdf.
+PDF_CONTENT = b"%PDF-1.4 contenido real"
+
 
 class FakeObjectStorage(ObjectStorage):
     """Guarda objetos en un dict en memoria."""
@@ -91,13 +95,13 @@ class TestStore:
         self, service: DocumentService, fake_storage: FakeObjectStorage
     ):
         document = await service.store(
-            upload_file("cedula.pdf", b"contenido real"),
+            upload_file("cedula.pdf", PDF_CONTENT),
             domain="deudor",
             owner_id=str(uuid.uuid4()),
         )
 
         assert document.content_type == "application/pdf"
-        assert document.size_bytes == len(b"contenido real")
+        assert document.size_bytes == len(PDF_CONTENT)
         assert document.etag
         assert document.object_key in fake_storage._objects
         assert document.object_key.startswith("deudor/")
@@ -112,7 +116,7 @@ class TestStore:
         assert exc_info.value.status_code == 422
 
     async def test_oversized_file_raises_413(self, service: DocumentService):
-        content = b"x" * (MAX_DOCUMENT_SIZE_BYTES + 1)
+        content = b"%PDF-1.4" + b"x" * (MAX_DOCUMENT_SIZE_BYTES + 1)
         with pytest.raises(HTTPException) as exc_info:
             await service.store(
                 upload_file("grande.pdf", content),
@@ -136,7 +140,7 @@ class TestStore:
         fake_storage.put_should_fail = True
         with pytest.raises(HTTPException) as exc_info:
             await service.store(
-                upload_file("cedula.pdf", b"contenido"),
+                upload_file("cedula.pdf", PDF_CONTENT),
                 domain="deudor",
                 owner_id=str(uuid.uuid4()),
             )
@@ -152,7 +156,7 @@ class TestStore:
 
         with pytest.raises(RuntimeError):
             await service.store(
-                upload_file("cedula.pdf", b"contenido"),
+                upload_file("cedula.pdf", PDF_CONTENT),
                 domain="deudor",
                 owner_id=str(uuid.uuid4()),
             )
@@ -215,12 +219,12 @@ class TestToContentResponse:
         self, service: DocumentService
     ):
         document = await service.store(
-            upload_file("cédula depósito.pdf", b"contenido real"),
+            upload_file("cédula depósito.pdf", PDF_CONTENT),
             domain="deudor",
             owner_id=str(uuid.uuid4()),
         )
         response = await service.to_content_response(document)
-        assert response.body == b"contenido real"
+        assert response.body == PDF_CONTENT
         assert response.media_type == "application/pdf"
         assert "inline" in response.headers["Content-Disposition"]
 
@@ -228,7 +232,7 @@ class TestToContentResponse:
         self, service: DocumentService, fake_storage: FakeObjectStorage
     ):
         document = await service.store(
-            upload_file("cedula.pdf", b"contenido"),
+            upload_file("cedula.pdf", PDF_CONTENT),
             domain="deudor",
             owner_id=str(uuid.uuid4()),
         )
@@ -243,7 +247,7 @@ class TestDeleteAndRestore:
         self, service: DocumentService, fake_storage: FakeObjectStorage, db_session
     ):
         document = await service.store(
-            upload_file("cedula.pdf", b"contenido"),
+            upload_file("cedula.pdf", PDF_CONTENT),
             domain="deudor",
             owner_id=str(uuid.uuid4()),
         )
@@ -266,7 +270,7 @@ class TestDeleteAndRestore:
         self, service: DocumentService, db_session
     ):
         document = await service.store(
-            upload_file("cedula.pdf", b"contenido"),
+            upload_file("cedula.pdf", PDF_CONTENT),
             domain="deudor",
             owner_id=str(uuid.uuid4()),
         )
@@ -286,7 +290,7 @@ class TestDeleteAndRestore:
 class TestToResponse:
     async def test_maps_model_fields_to_schema(self, service: DocumentService):
         document = await service.store(
-            upload_file("cedula.pdf", b"contenido"),
+            upload_file("cedula.pdf", PDF_CONTENT),
             domain="deudor",
             owner_id=str(uuid.uuid4()),
         )
