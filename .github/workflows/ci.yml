@@ -93,13 +93,16 @@ jobs:
           filters: |
             api:
               - 'api/**'
+              - '.github/workflows/**'
             client:
               - 'client/**'
+              - '.github/workflows/**'
             images:
               - 'api/**'
               - 'client/**'
               - 'landing/**'
               - 'nginx/**'
+              - '.github/workflows/**'
 
   api:
     name: API (black + pylint + pytest)
@@ -134,6 +137,9 @@ jobs:
           cache-dependency-glob: api/uv.lock
 
       - run: uv sync --locked
+
+      - name: Auditoría de dependencias (uv pip audit)
+        run: uv run pip-audit --strict
 
       - name: Levantar storage (misma imagen que object-storage/Dockerfile)
         working-directory: .
@@ -245,6 +251,7 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level high
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
