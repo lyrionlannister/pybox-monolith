@@ -12,11 +12,14 @@ from core.base.soft_delete_repository_base import SoftDeleteRepositoryBase
 class NotificationRepository(SoftDeleteRepositoryBase[NotificationModel]):
     model_class = NotificationModel
 
-    async def get_by_user_id(self, user_id: uuid.UUID) -> Sequence[NotificationModel]:
+    async def get_by_user_id(
+        self, user_id: uuid.UUID, limit: int = 200
+    ) -> Sequence[NotificationModel]:
         result = await self.session.execute(
             select(NotificationModel)
             .where(NotificationModel.user_id == user_id)
             .order_by(NotificationModel.created_at.desc())
+            .limit(limit)
         )
         return result.scalars().all()
 

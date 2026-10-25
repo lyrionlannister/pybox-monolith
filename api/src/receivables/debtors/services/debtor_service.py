@@ -129,14 +129,26 @@ class DebtorService:
         primary_addresses = await self.address_repo.get_by_debtor_id(debtor_id)
         primary_contacts = await self.contact_repo.get_by_debtor_id(debtor_id)
 
+        related_debtors = {
+            d.id: d for d in await self.debtor_repo.get_by_ids(related_ids)
+        }
+        related_addresses: dict[uuid.UUID, list] = {}
+        for a in await self.address_repo.get_by_debtor_ids(related_ids):
+            related_addresses.setdefault(a.debtor_id, []).append(a)
+        related_contacts: dict[uuid.UUID, list] = {}
+        for c in await self.contact_repo.get_by_debtor_ids(related_ids):
+            related_contacts.setdefault(c.debtor_id, []).append(c)
+
         codebtors = []
         for rid in related_ids:
-            rel = await self.debtor_repo.get_by_id(rid)
+            rel = related_debtors.get(rid)
             if rel is None:
                 continue
-            rel_addresses = await self.address_repo.get_by_debtor_id(rid)
-            rel_contacts = await self.contact_repo.get_by_debtor_id(rid)
-            codebtors.append(self._to_detail(rel, rel_addresses, rel_contacts))
+            codebtors.append(
+                self._to_detail(
+                    rel, related_addresses.get(rid, []), related_contacts.get(rid, [])
+                )
+            )
 
         return RelatedContactsResponse(
             debtor=self._to_detail(debtor, primary_addresses, primary_contacts),
@@ -183,9 +195,13 @@ class DebtorService:
         credits = await self.credit_repo.get_by_debtor_and_portfolio(
             debtor_id, portfolio_id
         )
+        installments_by_credit: dict[uuid.UUID, list] = {}
+        for p in await self.payment_repo.get_by_credit_ids([c.id for c in credits]):
+            installments_by_credit.setdefault(p.credit_id, []).append(p)
+
         result = []
         for c in credits:
-            installments = await self.payment_repo.get_by_credit_id(c.id)
+            installments = installments_by_credit.get(c.id, [])
             result.append(
                 DebtorCreditWithInstallmentsResponse(
                     credit=DebtorCreditResponse(

@@ -23,6 +23,21 @@ class PaymentRepository(SoftDeleteRepositoryBase[PaymentModel]):
         )
         return list(result.scalars().all())
 
+    async def get_by_credit_ids(
+        self, credit_ids: list[uuid.UUID]
+    ) -> list[PaymentModel]:
+        if not credit_ids:
+            return []
+        result = await self.session.execute(
+            select(PaymentModel)
+            .where(
+                PaymentModel.credit_id.in_(credit_ids),
+                PaymentModel.deleted_at.is_(None),
+            )
+            .order_by(PaymentModel.limit_pay_date)
+        )
+        return list(result.scalars().all())
+
     async def get_next_due_by_credit_ids(
         self, credit_ids: list[uuid.UUID]
     ) -> list[PaymentModel]:

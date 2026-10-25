@@ -69,16 +69,14 @@ class MyCreditsService:
                 "identidad para acceder a tu información crediticia.",
             )
 
-        all_credits: list[tuple[CreditModel, DebtorType]] = []
-        for debtor in debtors:
-            all_credits.extend(
-                (c, DebtorType.DEBTOR)
-                for c in await self._credit_repo.get_by_debtor_id(debtor.id)
-            )
-            all_credits.extend(
-                (c, DebtorType.CO_DEBTOR)
-                for c in await self._credit_repo.get_by_codebtor_id(debtor.id)
-            )
+        debtor_ids = [d.id for d in debtors]
+        all_credits: list[tuple[CreditModel, DebtorType]] = [
+            (c, DebtorType.DEBTOR)
+            for c in await self._credit_repo.get_by_debtor_ids(debtor_ids)
+        ] + [
+            (c, DebtorType.CO_DEBTOR)
+            for c in await self._credit_repo.get_by_codebtor_ids(debtor_ids)
+        ]
 
         if not all_credits:
             return []
@@ -100,12 +98,13 @@ class MyCreditsService:
         orgs = await self._org_repo.get_by_ids(org_ids)
         org_map = {o.id: o.name for o in orgs}
 
-        payment_methods_map: dict[uuid.UUID, list[PaymentMethodSummary]] = {}
-        for org_id in org_ids:
-            raw_methods = await self._payment_method_repo.get_active_by_organization_id(
-                org_id
-            )
-            payment_methods_map[org_id] = [
+        payment_methods_map: dict[uuid.UUID, list[PaymentMethodSummary]] = {
+            org_id: [] for org_id in org_ids
+        }
+        for m in await self._payment_method_repo.get_active_by_organization_ids(
+            org_ids
+        ):
+            payment_methods_map[m.organization_id].append(
                 PaymentMethodSummary(
                     id=m.id,
                     name=m.name,
@@ -122,14 +121,21 @@ class MyCreditsService:
                     payment_link=m.payment_link,
                     qr_image_url=m.qr_image_url,
                 )
-                for m in raw_methods
-            ]
+            )
 
         country_map = await self._country_repo.get_active_map()
 
+        credit_ids = [credit.id for credit, _ in all_credits]
+        payments_by_credit: dict[uuid.UUID, list] = {}
+        for p in await self._payment_repo.get_by_credit_ids(credit_ids):
+            payments_by_credit.setdefault(p.credit_id, []).append(p)
+        active_settlement_credit_ids = (
+            await self._settlement_ticket_repo.get_active_credit_ids(credit_ids)
+        )
+
         results: list[CreditWithPayments] = []
         for credit, role in all_credits:
-            raw_payments = await self._payment_repo.get_by_credit_id(credit.id)
+            raw_payments = payments_by_credit.get(credit.id, [])
             payments = [
                 PaymentSummary(
                     id=p.id,
@@ -151,10 +157,7 @@ class MyCreditsService:
             country = country_map.get(portfolio.country) if portfolio.country else None
             currency_code = country.currency_code if country else "COP"
 
-            settlement_requested = (
-                await self._settlement_ticket_repo.get_active_by_credit_id(credit.id)
-                is not None
-            )
+            settlement_requested = credit.id in active_settlement_credit_ids
 
             results.append(
                 CreditWithPayments(

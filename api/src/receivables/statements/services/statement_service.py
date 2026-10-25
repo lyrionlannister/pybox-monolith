@@ -95,10 +95,13 @@ class StatementService:
         currency_code = await self._country_repo.get_currency_code(portfolio.country)
         cutoff_date = datetime.now(timezone.utc)
 
-        lines: list[StatementCreditLine] = []
-        for credit in credits:
-            payments = await self._payment_repo.get_by_credit_id(credit.id)
-            lines.append(self._to_credit_line(credit, payments))
+        payments_by_credit: dict[uuid.UUID, list] = {}
+        for p in await self._payment_repo.get_by_credit_ids([c.id for c in credits]):
+            payments_by_credit.setdefault(p.credit_id, []).append(p)
+        lines = [
+            self._to_credit_line(credit, payments_by_credit.get(credit.id, []))
+            for credit in credits
+        ]
 
         pdf_bytes = build_statement_pdf(
             organization_name=org_name,
@@ -329,11 +332,10 @@ class StatementService:
         org_names = {o.id: o.name for o in orgs}
 
         credit_ids = [s.credit_id for s in statements if s.credit_id is not None]
-        credit_numbers: dict[uuid.UUID, str] = {}
-        for cid in credit_ids:
-            credit = await self._credit_repo.get_by_id(cid)
-            if credit is not None:
-                credit_numbers[cid] = credit.credit_number
+        credit_numbers = {
+            c.id: c.credit_number
+            for c in await self._credit_repo.get_by_ids(credit_ids)
+        }
 
         items = [
             StatementResponse(

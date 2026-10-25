@@ -47,3 +47,25 @@ class CreditSettlementTicketRepository(
             .limit(1)
         )
         return result.scalar_one_or_none()
+
+    async def get_active_credit_ids(
+        self, credit_ids: list[uuid.UUID]
+    ) -> set[uuid.UUID]:
+        """Igual que `get_active_by_credit_id`, en batch: créditos con un vínculo de
+        baja cuyo ticket sigue abierto."""
+        if not credit_ids:
+            return set()
+        result = await self.session.execute(
+            select(CreditSettlementTicketModel.credit_id)
+            .join(
+                SupportTicketModel,
+                SupportTicketModel.id == CreditSettlementTicketModel.ticket_id,
+            )
+            .where(
+                CreditSettlementTicketModel.credit_id.in_(credit_ids),
+                SupportTicketModel.status.not_in(
+                    [SupportTicketStatus.RESOLVED, SupportTicketStatus.CLOSED]
+                ),
+            )
+        )
+        return set(result.scalars().all())

@@ -34,6 +34,33 @@ class PermissionAssignmentRepository(
         )
         return list(result.all())
 
+    async def get_overrides_for_user_orgs(
+        self, user_id: uuid.UUID, organization_ids: list[uuid.UUID]
+    ) -> dict[uuid.UUID, list[tuple[str, PermissionEffect]]]:
+        if not organization_ids:
+            return {}
+        result = await self.session.execute(
+            select(
+                PermissionAssignmentModel.organization_id,
+                PermissionModel.name,
+                PermissionAssignmentModel.effect,
+            )
+            .join(
+                PermissionModel,
+                PermissionAssignmentModel.permission_id == PermissionModel.id,
+            )
+            .where(
+                PermissionAssignmentModel.user_id == user_id,
+                PermissionAssignmentModel.organization_id.in_(organization_ids),
+                PermissionAssignmentModel.is_active.is_(True),
+                PermissionAssignmentModel.deleted_at.is_(None),
+            )
+        )
+        overrides_by_org: dict[uuid.UUID, list[tuple[str, PermissionEffect]]] = {}
+        for org_id, name, effect in result.all():
+            overrides_by_org.setdefault(org_id, []).append((name, effect))
+        return overrides_by_org
+
     async def get_permission_by_name(self, name: str) -> PermissionModel | None:
         result = await self.session.execute(
             select(PermissionModel).where(

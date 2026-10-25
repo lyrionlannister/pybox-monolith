@@ -154,6 +154,11 @@ class UserService:
                     for a in assignments
                     if a.organization_id is not None
                 }
+                overrides_by_org = (
+                    await self.permission_assignment_repo.get_overrides_for_user_orgs(
+                        user_id, org_ids
+                    )
+                )
                 orgs = {}
                 for m in memberships:
                     org_id_str = str(m.organization_id)
@@ -161,10 +166,7 @@ class UserService:
                     org = org_models.get(org_id_str)
                     if assignment and org:
                         base = get_base_permissions(assignment.role)
-                        perm_repo = self.permission_assignment_repo
-                        overrides = await perm_repo.get_overrides_for_user_org(
-                            user_id, m.organization_id
-                        )
+                        overrides = overrides_by_org.get(m.organization_id, [])
                         grants = {
                             name
                             for name, effect in overrides

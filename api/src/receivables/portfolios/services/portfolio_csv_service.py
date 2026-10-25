@@ -827,8 +827,9 @@ class PortfolioCsvService:
         logger.info(
             "[update_csv] eliminando %d créditos existentes", len(existing_credits)
         )
-        for credit in existing_credits:
-            await self.credit_repo.delete(credit)
+        await self.credit_repo.soft_delete_by_portfolios(
+            [portfolio_id], datetime.now(timezone.utc)
+        )
 
         await self._archive_source_file(portfolio, file_bytes, filename, "update")
 

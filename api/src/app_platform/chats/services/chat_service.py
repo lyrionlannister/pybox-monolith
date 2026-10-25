@@ -241,15 +241,12 @@ class ChatService:
             [m.id for m in rows]
         )
 
-        sender_cache: dict[uuid.UUID, any] = {}
+        sender_ids = list({m.sender_id for m in rows})
+        sender_cache = await self.user_repo.get_by_ids(sender_ids)
         items: list[MessageSchema] = []
 
         for msg in rows:
-            if msg.sender_id not in sender_cache:
-                sender_cache[msg.sender_id] = await self.user_repo.get_by_id(
-                    msg.sender_id
-                )
-            sender = sender_cache[msg.sender_id]
+            sender = sender_cache.get(msg.sender_id)
 
             msg_statuses = statuses_map.get(msg.id, [])
             other = [s for s in msg_statuses if s.user_id != msg.sender_id]
@@ -282,8 +279,7 @@ class ChatService:
     ) -> list[uuid.UUID]:
         await self.assert_member(chat_id, user_id)
         now = datetime.now(timezone.utc)
-        for msg_id in message_ids:
-            await self.msg_repo.mark_read(msg_id, user_id, now)
+        await self.msg_repo.mark_read_many(message_ids, user_id, now)
         members = await self.chat_repo.get_active_members(chat_id)
         return [m.user_id for m in members if m.user_id != user_id]
 
