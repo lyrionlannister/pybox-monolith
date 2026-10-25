@@ -71,6 +71,4 @@ async def seed_platform_gateway_credentials(session: AsyncSession) -> None:
                 "provider=mercadopago MX (env incompleto)"
             )
 
-    if seeded:
-        await session.commit()
     logger.info("[seed] platform_gateway_credentials_seeded | nuevos=%d", seeded)

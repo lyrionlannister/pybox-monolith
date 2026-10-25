@@ -49,5 +49,4 @@ async def seed_admin(session: AsyncSession) -> None:
             scope=UserScope.GLOBAL,
         )
     )
-    await session.commit()
     logger.info("[seed] admin_created | user_id=%s", user.id)

@@ -118,5 +118,4 @@ async def seed_countries(session: AsyncSession) -> None:
                 )
             )
 
-    await session.commit()
     logger.info("[seed] countries_seeded | countries=%d", len(Nationality))

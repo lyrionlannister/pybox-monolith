@@ -51,4 +51,3 @@ async def seed_permissions(session: AsyncSession) -> None:
             )
     if new_permissions:
         session.add_all(new_permissions)
-    await session.commit()

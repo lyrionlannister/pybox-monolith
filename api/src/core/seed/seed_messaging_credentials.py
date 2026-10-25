@@ -83,6 +83,4 @@ async def seed_messaging_credentials(session: AsyncSession) -> None:
         )
         seeded += 1
 
-    if seeded:
-        await session.commit()
     logger.info("[seed] messaging_credentials_seeded | nuevos=%d", seeded)

@@ -63,4 +63,3 @@ async def seed_channels(session: AsyncSession) -> None:
             )
     if new_channels:
         session.add_all(new_channels)
-    await session.commit()
