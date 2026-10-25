@@ -77,8 +77,37 @@ env:
   PGADMIN_PASSWORD: "ci-password"
 
 jobs:
+  changes:
+    name: Detectar cambios
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      client: ${{ steps.filter.outputs.client }}
+      images: ${{ steps.filter.outputs.images }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'api/**'
+              - '.github/workflows/**'
+            client:
+              - 'client/**'
+              - '.github/workflows/**'
+            images:
+              - 'api/**'
+              - 'client/**'
+              - 'landing/**'
+              - 'nginx/**'
+              - '.github/workflows/**'
+
   api:
     name: API (black + pylint + pytest)
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -108,6 +137,9 @@ jobs:
           cache-dependency-glob: api/uv.lock
 
       - run: uv sync --locked
+
+      - name: Auditoría de dependencias (uv pip audit)
+        run: uv run pip-audit --strict
 
       - name: Levantar storage (misma imagen que object-storage/Dockerfile)
         working-directory: .
@@ -148,6 +180,8 @@ jobs:
     # este job valida que las migraciones de Alembic sí corren limpias desde cero,
     # igual que en un despliegue real.
     name: Migraciones Alembic en Postgres 17
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -183,6 +217,8 @@ jobs:
 
   client:
     name: Cliente (lint + pruebas + build)
+    needs: changes
+    if: needs.changes.outputs.client == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -215,6 +251,7 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level high
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
@@ -222,6 +259,8 @@ jobs:
   imagenes:
     # Confirma que las imágenes de producción construyen; no publica nada.
     name: Imágenes de producción
+    needs: changes
+    if: needs.changes.outputs.images == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

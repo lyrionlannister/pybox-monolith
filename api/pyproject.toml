@@ -35,6 +35,7 @@ dev = [
     "black>=26.5.1",
     "httpx-ws>=0.9.0",
     "isort>=9.0.2",
+    "pip-audit>=2.9.0",
     "pylint>=4.0.10",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
