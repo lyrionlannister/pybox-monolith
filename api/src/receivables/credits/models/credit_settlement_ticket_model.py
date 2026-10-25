@@ -1,6 +1,7 @@
 """Vínculo entre un ticket de soporte y el crédito que el titular pide dar de baja."""
 
 import uuid
+from decimal import Decimal
 
 from sqlalchemy import ForeignKey, Numeric
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
@@ -35,8 +36,8 @@ class CreditSettlementTicketModel(BaseModel):
         index=True,
         name="id_credito",
     )
-    settlement_amount: Mapped[float] = mapped_column(
-        Numeric(10, 2), nullable=False, default=0.0, name="monto_baja"
+    settlement_amount: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2), nullable=False, default=Decimal("0"), name="monto_baja"
     )
     payment_id: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True),

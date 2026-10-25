@@ -235,8 +235,8 @@ class StatementService:
                 credit.credit_type, credit.credit_type.value
             ),
             disbursed_date=credit.disbursed_date,
-            total_credit_balance=float(credit.total_credit_balance),
-            overdue_principal_balance=float(credit.overdue_principal_balance),
+            total_credit_balance=credit.total_credit_balance,
+            overdue_principal_balance=credit.overdue_principal_balance,
             days_overdue_at_cutoff=credit.days_overdue_at_cutoff,
             pending_installments=credit.pending_installments,
             overdue_installments=credit.overdue_installments,
@@ -245,9 +245,9 @@ class StatementService:
                     installment_number=p.installment_number,
                     limit_pay_date=p.limit_pay_date,
                     payment_date=p.payment_date,
-                    payment_amount=float(p.payment_amount),
-                    principal_payment=float(p.principal_payment),
-                    total_interest_amount=float(p.total_interest_amount),
+                    payment_amount=p.payment_amount,
+                    principal_payment=p.principal_payment,
+                    total_interest_amount=p.total_interest_amount,
                     status_label=PAYMENT_STATUS_LABELS.get(p.status, p.status.value),
                 )
                 for p in payments
