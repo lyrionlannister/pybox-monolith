@@ -822,9 +822,11 @@ class SupportService:
         *,
         check_creator: bool = False,
     ) -> None:
+        # 404 genérico, no 403: un 403 distinto de "no encontrado" deja distinguir
+        # por fuerza bruta qué `ticket_number` existen en el sistema (secuencial).
         if f.org_ids is not None and ticket.organization_id not in f.org_ids:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Acceso denegado."
+                status_code=status.HTTP_404_NOT_FOUND, detail="Ticket no encontrado."
             )
         if (
             check_creator
@@ -832,7 +834,7 @@ class SupportService:
             and ticket.created_by != f.created_by
         ):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Acceso denegado."
+                status_code=status.HTTP_404_NOT_FOUND, detail="Ticket no encontrado."
             )
 
     _ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".doc", ".pdf"}

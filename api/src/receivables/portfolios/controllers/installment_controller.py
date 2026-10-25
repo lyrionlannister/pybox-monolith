@@ -9,7 +9,10 @@ from core.config.api_router import APIRouter
 from core.config.logger import logger
 from core.security.constants.permissions import PORTFOLIO_UPLOAD_UPDATE
 from core.security.dependencies import CurrentSession
-from core.security.policies.security_policies import require_org_admin
+from core.security.policies.security_policies import (
+    require_org_admin,
+    require_org_visibility,
+)
 from identity.organizations.dependencies import OrgServiceDep
 from receivables.portfolios.dependencies import PortfolioServiceDep
 from receivables.portfolios.installment_background_tasks import (
@@ -43,6 +46,7 @@ async def upload_installments(
     portfolio = await portfolio_service.get_by_id(portfolio_id)
     org_id_str = str(portfolio.organization_id)
 
+    require_org_visibility(session, org_id_str, "Portafolio no encontrado")
     require_org_admin(session, org_id_str)
     if not session.is_global:
         org_entry = session.orgs.get(org_id_str)
