@@ -428,7 +428,9 @@ class AuthService:
         doc_hash = encrypt_service.hash_document(document_number)
         user = await self.user_repository.get_by_document(dt, doc_hash)
         if user is None:
-            raise ValueError("No encontramos una cuenta con ese documento.")
+            # Mismo criterio que `lookup_user_for_reset`: no confirmar por status
+            # code si el documento existe o no, para no servir de oráculo.
+            return
         svc = get_verification_service(channel, self._session)
         await svc.send_code(user)
         logger.info(
