@@ -72,6 +72,7 @@ export const WompiCheckoutForm: React.FC<WompiCheckoutFormProps> = ({
   });
   const [pseFields, setPseFields] = useState<PseFieldsValue>({
     userType: "0", userLegalIdType: "CC", userLegalId: "", financialInstitutionCode: "", paymentDescription: "",
+    fullName: "", phone: "", address: "", city: "",
   });
   const [phone, setPhone] = useState("");
   const [payerFields, setPayerFields] = useState<PayuPayerFieldsValue>({
@@ -149,6 +150,10 @@ export const WompiCheckoutForm: React.FC<WompiCheckoutFormProps> = ({
         financialInstitutionCode: pseFields.financialInstitutionCode,
         paymentDescription,
         customerEmail,
+        fullName: pseFields.fullName || undefined,
+        phone: pseFields.phone || undefined,
+        address: pseFields.address || undefined,
+        city: pseFields.city || undefined,
         deviceInfo: capturePayuDeviceInfo(),
       };
     }
@@ -159,6 +164,7 @@ export const WompiCheckoutForm: React.FC<WompiCheckoutFormProps> = ({
         paymentDescription,
         customerEmail,
         ...optionalPayer(),
+        phone: phone || undefined,
         deviceInfo: capturePayuDeviceInfo(),
       };
     }
@@ -320,11 +326,21 @@ export const WompiCheckoutForm: React.FC<WompiCheckoutFormProps> = ({
           )}
 
           {method === "BANCOLOMBIA_TRANSFER" && (
-            <PayuPayerFields
-              value={payerFields}
-              onChange={setPayerFields}
-              idPrefix="wompi-bancolombia-payer"
-            />
+            <>
+              <PayuPayerFields
+                value={payerFields}
+                onChange={setPayerFields}
+                idPrefix="wompi-bancolombia-payer"
+              />
+              <Input
+                label="Celular"
+                id="wompi-bancolombia-phone"
+                maxLength={10}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                placeholder="3001234567"
+              />
+            </>
           )}
 
           {method === "DAVIPLATA" && (

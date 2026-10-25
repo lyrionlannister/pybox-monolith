@@ -59,6 +59,10 @@ def _to_gateway_payment_method(body: TransactionRequest) -> PaymentMethodInput:
             user_legal_id=body.user_legal_id,
             financial_institution_code=body.financial_institution_code,
             payment_description=body.payment_description,
+            full_name=body.full_name,
+            phone=body.phone,
+            address=body.address,
+            city=body.city,
         )
     if isinstance(body, NequiTransactionRequest):
         return NequiPaymentMethod(
@@ -73,6 +77,7 @@ def _to_gateway_payment_method(body: TransactionRequest) -> PaymentMethodInput:
         return BancolombiaTransferPaymentMethod(
             payment_description=body.payment_description,
             full_name=body.full_name,
+            phone=body.phone,
             user_legal_id_type=body.user_legal_id_type,
             user_legal_id=body.user_legal_id,
             address=body.address,

@@ -6,6 +6,11 @@ export interface PseFieldsValue {
   userLegalId: string;
   financialInstitutionCode: string;
   paymentDescription: string;
+  // Wompi los ignora; PayU y ePayco los exigen para PSE.
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
 }
 
 export interface WompiPseFieldsProps {
