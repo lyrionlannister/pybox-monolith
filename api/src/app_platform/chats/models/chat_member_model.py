@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, SmallInteger, func
+from sqlalchemy import DateTime, ForeignKey, Index, SmallInteger, func
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -12,6 +12,11 @@ from core.base.audit_model import AuditModel
 
 class ChatMemberModel(AuditModel):
     __tablename__ = "chat_members"
+    __table_args__ = (
+        # `user_id` es la columna no-líder de la PK compuesta: sin este índice,
+        # "listar mis chats" (filtra por user_id) no tiene índice usable.
+        Index("ix_chat_members_user_id", "user_id"),
+    )
 
     chat_id: Mapped[uuid.UUID] = mapped_column(
         PgUUID(as_uuid=True),

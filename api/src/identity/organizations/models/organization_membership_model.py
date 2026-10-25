@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Boolean, ForeignKey, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Index, text
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,8 +12,14 @@ from core.base.audit_model import BaseModel
 class OrganizationMembershipModel(BaseModel):
     __tablename__ = "membresias_organizacion"
     __table_args__ = (
-        UniqueConstraint(
-            "id_usuario", "id_entidad", name="uq_membresia_usuario_entidad"
+        # Único parcial (solo entre membresías vivas): con soft-delete, una membresía
+        # revocada no debe bloquear volver a invitar al mismo usuario más tarde.
+        Index(
+            "uq_membresia_usuario_entidad",
+            "id_usuario",
+            "id_entidad",
+            unique=True,
+            postgresql_where=text("eliminado_en IS NULL"),
         ),
     )
 

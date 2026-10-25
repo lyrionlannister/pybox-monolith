@@ -45,7 +45,11 @@ class IvrExecutionModel(BaseModel):
     )
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        PgUUID(as_uuid=True), nullable=False, index=True, name="id_organizacion"
+        PgUUID(as_uuid=True),
+        ForeignKey("entidades.id"),
+        nullable=False,
+        index=True,
+        name="id_organizacion",
     )
 
     status: Mapped[IvrExecutionStatus] = mapped_column(

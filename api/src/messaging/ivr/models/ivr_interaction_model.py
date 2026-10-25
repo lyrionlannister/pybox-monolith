@@ -69,7 +69,11 @@ class IvrInteractionModel(BaseModel):
     )
 
     organization_id: Mapped[uuid.UUID | None] = mapped_column(
-        PgUUID(as_uuid=True), nullable=True, index=True, name="id_organizacion"
+        PgUUID(as_uuid=True),
+        ForeignKey("entidades.id"),
+        nullable=True,
+        index=True,
+        name="id_organizacion",
     )
 
     debtor_id: Mapped[uuid.UUID | None] = mapped_column(
