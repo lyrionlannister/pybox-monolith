@@ -412,7 +412,7 @@ class TestProcessCsvBulkUpsertPath:
 
         service = PortfolioCsvService(db_session)
 
-        monkeypatch.delenv("PORTFOLIO_CSV_BULK_UPSERT", raising=False)
+        monkeypatch.setenv("PORTFOLIO_CSV_BULK_UPSERT", "false")
         seq_debtor_doc, seq_codebtor_doc = (
             unique_document_number(),
             unique_document_number(),
@@ -598,12 +598,9 @@ class TestProcessCsvBulkUpsertPath:
         sync_engine = db_container.engine.sync_engine
 
         async def _run_and_count(
-            flag_value: str | None, portfolio_name: str, credit_prefix: str
+            flag_value: str, portfolio_name: str, credit_prefix: str
         ) -> int:
-            if flag_value is None:
-                monkeypatch.delenv("PORTFOLIO_CSV_BULK_UPSERT", raising=False)
-            else:
-                monkeypatch.setenv("PORTFOLIO_CSV_BULK_UPSERT", flag_value)
+            monkeypatch.setenv("PORTFOLIO_CSV_BULK_UPSERT", flag_value)
 
             org = build_organization()
             db_session.add(org)
@@ -633,7 +630,7 @@ class TestProcessCsvBulkUpsertPath:
             return len(statements)
 
         sequential_count = await _run_and_count(
-            None, "Portafolio Seq Baseline", "CR-SEQBASE"
+            "false", "Portafolio Seq Baseline", "CR-SEQBASE"
         )
         bulk_count = await _run_and_count(
             "true", "Portafolio Bulk Baseline", "CR-BULKBASE"
