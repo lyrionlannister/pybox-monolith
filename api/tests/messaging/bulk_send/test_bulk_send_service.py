@@ -436,6 +436,54 @@ class TestProcessWhatsAppConsentGate:
         assert response.total_sent == 0
         mocks["batch_sender"].process_batch.assert_not_called()
 
+    async def test_recipient_without_existing_case_creates_one_via_bulk(self):
+        """Teléfono sin caso previo (`get_existing_statuses` no lo trae): debe crearse
+        vía `ensure_cases_bulk` (un solo INSERT masivo), no `ensure_case` fila por
+        fila, y queda PENDIENTE por default -- no se envía en el mismo batch."""
+        service, mocks = build_service()
+        mocks["portfolio_repo"].get_by_id = AsyncMock(return_value=make_portfolio())
+        mocks["billing_status_service"].is_blocked = AsyncMock(return_value=False)
+        mocks["channel_repo"].get_by_id = AsyncMock(
+            return_value=make_channel(ChannelName.WHATSAPP)
+        )
+        credentials = MagicMock(active=True, phone_number_id="pnid-1")
+        mocks["whatsapp_credentials_repo"].get_by_organization = AsyncMock(
+            return_value=credentials
+        )
+        whatsapp_data = MagicMock(meta_name="plantilla_meta", language="es")
+        mocks["whatsapp_template_data_repo"].get_by_template_id = AsyncMock(
+            return_value=whatsapp_data
+        )
+        template = MagicMock(id=uuid.uuid4(), channel=ChannelName.WHATSAPP)
+        mocks["template_repo"].get_by_id_and_portfolio = AsyncMock(
+            return_value=template
+        )
+        mocks["campaign_repo"].get_or_create_manual = AsyncMock(
+            return_value=MagicMock(id=uuid.uuid4(), name="Envío Manual — WhatsApp")
+        )
+        mocks["debtor_repo"].get_by_document_hashes = AsyncMock(return_value=[])
+        mocks["whatsapp_channel_request_service"].get_existing_statuses = AsyncMock(
+            return_value={}
+        )
+        mocks["whatsapp_channel_request_service"].ensure_cases_bulk = AsyncMock()
+
+        response = await service.process(
+            portfolio_id=uuid.uuid4(),
+            channel_id=uuid.uuid4(),
+            rows=[
+                {"tipo_documento": "CC", "documento": "1", "destinatario": "3001112233"}
+            ],
+            user_session=make_user_session(),
+            template_id=uuid.uuid4(),
+        )
+
+        assert response.pending_approval_count == 1
+        assert response.total_sent == 0
+        mocks[
+            "whatsapp_channel_request_service"
+        ].ensure_cases_bulk.assert_awaited_once()
+        mocks["whatsapp_channel_request_service"].ensure_case.assert_not_called()
+
     async def test_recipient_with_approved_consent_is_sent(self):
         service, mocks = build_service()
         mocks["portfolio_repo"].get_by_id = AsyncMock(return_value=make_portfolio())

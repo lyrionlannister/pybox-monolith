@@ -7,6 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app_platform.support.services.support_service import SupportService
 from core.database.database import get_main_session
+from identity.organizations.repository.organization_membership_repository import (
+    OrganizationMembershipRepository,
+)
 from identity.organizations.repository.organization_repository import (
     OrganizationRepository,
 )
@@ -116,6 +119,7 @@ def get_whatsapp_chat_service(
         CampaignRepository(session),
         UserRepository(session),
         OrganizationRepository(session),
+        OrganizationMembershipRepository(session),
     )
 
 

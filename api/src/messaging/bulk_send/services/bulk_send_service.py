@@ -288,6 +288,37 @@ class BulkSendService:
                     organization_id, all_phones
                 )
             )
+            # Mismo prefetch en batch para los teléfonos SIN caso previo: un solo
+            # `ensure_cases_bulk` en vez de un `ensure_case` (SELECT+INSERT) por fila
+            # dentro del loop de abajo.
+            missing_phone_to_debtor_id: dict[str, uuid.UUID | None] = {}
+            for row in rows:
+                destinatario = row.get("destinatario", "").strip()
+                if not destinatario:
+                    continue
+                phone = (
+                    normalize_phone(destinatario, phone_prefix)
+                    if phone_prefix
+                    else destinatario
+                )
+                if phone in case_status_cache or phone in missing_phone_to_debtor_id:
+                    continue
+                documento = row.get("documento", "").strip()
+                debtor_id = None
+                if documento:
+                    debtor = debtors_by_hash.get(
+                        encrypt_service.hash_document(documento)
+                    )
+                    debtor_id = debtor.id if debtor is not None else None
+                missing_phone_to_debtor_id[phone] = debtor_id
+            if missing_phone_to_debtor_id:
+                await self._whatsapp_channel_request_service.ensure_cases_bulk(
+                    organization_id,
+                    missing_phone_to_debtor_id,
+                    origin_campaign_id=campaign_id,
+                )
+                for phone in missing_phone_to_debtor_id:
+                    case_status_cache[phone] = ChannelRequestStatus.PENDING
 
         for row in rows:
             tipo_raw = row.get("tipo_documento", "").strip()
@@ -326,17 +357,10 @@ class BulkSendService:
                     if phone_prefix
                     else destinatario
                 )
-                case_status = case_status_cache.get(phone)
-                if case_status is None:
-                    case_status = (
-                        await self._whatsapp_channel_request_service.ensure_case(
-                            organization_id,
-                            phone,
-                            debtor_id=debtor_id,
-                            origin_campaign_id=campaign_id,
-                        )
-                    )
-                    case_status_cache[phone] = case_status
+                # `case_status_cache` ya cubre todos los teléfonos (prefetch arriba):
+                # los que tenían caso previo, vía `get_existing_statuses`, y los que
+                # no, recién creados PENDIENTE vía `ensure_cases_bulk`.
+                case_status = case_status_cache.get(phone, ChannelRequestStatus.PENDING)
                 if case_status != ChannelRequestStatus.APPROVED:
                     pending_approval += 1
                     continue
