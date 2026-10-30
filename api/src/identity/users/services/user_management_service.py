@@ -161,13 +161,18 @@ class UserManagementService:
         )
 
     async def _require_member(self, user_id: uuid.UUID, org_id: uuid.UUID) -> None:
-        """Los permisos por usuario solo se otorgan a miembros de la organización; si no
-        lo es, 404 (no se confirma que el usuario exista en otro lado)."""
+        """Los permisos por usuario solo se otorgan a miembros de la organización que
+        no sean personal GLOBAL (mismo criterio que
+        `UserService.assert_can_manage_user`); si no, 404 (no se confirma que el
+        usuario exista en otro lado)."""
+        not_found = HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Miembro no encontrado."
+        )
+        if await self.role_assignment_repo.get_global_user_ids([user_id]):
+            raise not_found
         memberships = await self.membership_repo.get_by_user_id(user_id)
         if not any(m.organization_id == org_id for m in memberships):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Miembro no encontrado."
-            )
+            raise not_found
 
     async def list_permissions(
         self, user_id: uuid.UUID, org_id: uuid.UUID

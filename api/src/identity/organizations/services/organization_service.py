@@ -318,6 +318,38 @@ class OrganizationService:
         )
         return org
 
+    async def _require_existing_admin_colleague(
+        self, admin_user_id: uuid.UUID, candidate_user_id: uuid.UUID
+    ) -> None:
+        """`representative_mode=select` no puede nombrar representante legal a un
+        tercero arbitrario: solo a alguien que ya comparte una organización con el
+        admin que registra (donde ese admin administra), evitando que se le asigne
+        `is_legal_representative=True` a un usuario sin su conocimiento."""
+        admin_memberships = await self.membership_repo.get_by_user_id(admin_user_id)
+        admin_org_ids = {
+            m.organization_id for m in admin_memberships if m.role == UserRole.ADMIN
+        }
+        if not admin_org_ids:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "Debes seleccionar un representante legal que ya pertenezca a "
+                    "una organización que administras."
+                ),
+            )
+        candidate_memberships = await self.membership_repo.get_by_user_id(
+            candidate_user_id
+        )
+        candidate_org_ids = {m.organization_id for m in candidate_memberships}
+        if not candidate_org_ids & admin_org_ids:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "Debes seleccionar un representante legal que ya pertenezca a "
+                    "una organización que administras."
+                ),
+            )
+
     async def register_with_representative(
         self,
         name: str,
@@ -340,6 +372,7 @@ class OrganizationService:
         representative_filename: str,
         created_by_user_id: uuid.UUID,
         scope: UserScope,
+        admin_scope: UserScope,
     ) -> OrganizationModel:
         if self.user_repo is None:
             raise RuntimeError("user_repo is required for register_with_representative")
@@ -357,6 +390,10 @@ class OrganizationService:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail="Debes seleccionar un representante legal.",
+                )
+            if admin_scope != UserScope.GLOBAL:
+                await self._require_existing_admin_colleague(
+                    created_by_user_id, representative_user_id
                 )
             rep_user_id = representative_user_id
         else:  # CREATE

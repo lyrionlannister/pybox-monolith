@@ -297,6 +297,7 @@ async def register_organization(
         representative_file_bytes=rep_bytes,
         representative_filename=rep_filename,
         created_by_user_id=session.user_id,
+        admin_scope=admin_scope,
         scope=admin_scope,
     )
     await support_service.create_org_verification_ticket(org.id, session.user_id)
