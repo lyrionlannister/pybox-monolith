@@ -16,9 +16,9 @@ class CreditPaymentAttemptRepository(
     model_class = CreditPaymentAttemptModel
 
     async def get_latest_by_payment_id(
-        self, payment_id: uuid.UUID
+        self, payment_id: uuid.UUID, *, for_update: bool = False
     ) -> CreditPaymentAttemptModel | None:
-        result = await self.session.execute(
+        query = (
             select(CreditPaymentAttemptModel)
             .where(
                 CreditPaymentAttemptModel.payment_id == payment_id,
@@ -27,6 +27,9 @@ class CreditPaymentAttemptRepository(
             .order_by(CreditPaymentAttemptModel.attempt_number.desc())
             .limit(1)
         )
+        if for_update:
+            query = query.with_for_update()
+        result = await self.session.execute(query)
         return result.scalars().first()
 
     async def get_by_provider_reference(

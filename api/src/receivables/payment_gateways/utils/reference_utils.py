@@ -27,3 +27,14 @@ def build_payment_reference(payment_id: uuid.UUID, attempt_number: int) -> str:
 def to_amount_in_cents(amount: Decimal) -> int:
     """Wompi trabaja en centavos COP enteros (`amount_in_cents`)."""
     return int((amount * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
+def round_cents_to_whole_currency_cents(amount_in_cents: int) -> int:
+    """Bold/ePayco/PayU facturan en pesos enteros, no en centavos: redondea
+    `amount_in_cents` al peso más cercano (HALF_UP, igual criterio que
+    `to_amount_in_cents`) y lo devuelve ya en centavos (múltiplo de 100), para que
+    el monto cobrado real y el monto esperado registrado coincidan."""
+    whole_units = (Decimal(amount_in_cents) / 100).quantize(
+        Decimal("1"), rounding=ROUND_HALF_UP
+    )
+    return int(whole_units * 100)

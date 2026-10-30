@@ -92,7 +92,17 @@ class PaymentCheckoutService:
 
         tokens = await gateway.get_acceptance_tokens()
 
-        latest_attempt = await self._attempt_repo.get_latest_by_payment_id(payment.id)
+        latest_attempt = await self._attempt_repo.get_latest_by_payment_id(
+            payment.id, for_update=True
+        )
+        if latest_attempt is not None and latest_attempt.status in (
+            ReceivablesPaymentAttemptStatus.PENDING,
+            ReceivablesPaymentAttemptStatus.APPROVED,
+        ):
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "Ya hay un intento de cobro en curso para esta cuota.",
+            )
         attempt_number = (latest_attempt.attempt_number + 1) if latest_attempt else 1
         amount_in_cents = to_amount_in_cents(payment.payment_amount)
         reference = build_payment_reference(payment.id, attempt_number)
@@ -117,7 +127,7 @@ class PaymentCheckoutService:
                 charge_mode=ChargeMode.CHECKOUT,
                 provider_reference=reference,
                 provider_transaction_id=transaction.id,
-                expected_amount_cents=amount_in_cents,
+                expected_amount_cents=transaction.amount_in_cents,
                 status=to_attempt_status(transaction.status),
                 provider_payload=transaction.raw,
                 acceptance_permalink=tokens.acceptance_permalink,

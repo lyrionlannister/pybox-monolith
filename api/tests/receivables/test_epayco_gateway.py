@@ -192,6 +192,40 @@ class TestCreateTransaction:
         )
         assert payload["testMode"] is True
 
+    async def test_pse_payment_rounds_amount_to_whole_peso(self, monkeypatch):
+        """ePayco factura en pesos enteros: 6_500_075 centavos (65000.75 COP) debe
+        redondearse HALF_UP a 65001 COP, y el `amount_in_cents` de la transacción
+        devuelta debe reflejar ese redondeo (65_001_00), no el crudo sin redondear."""
+        gateway = _make_gateway(monkeypatch)
+        # pylint: disable-next=protected-access
+        gateway._client.create_pse_transaction.return_value = {
+            "success": True,
+            "data": {
+                "ref_payco": 26292245,
+                "estado": "Pendiente",
+                "urlbanco": "https://registro.pse.com.co/confirm",
+            },
+        }
+        pse = _pse_payment_method()
+
+        transaction = await gateway.create_transaction(
+            reference="PAG-1",
+            amount_in_cents=6_500_075,
+            currency="COP",
+            payment_method=pse,
+            acceptance_token="",
+            accept_personal_auth="",
+            customer_email="debtor@example.com",
+            device_info=_device_info(ip_address="190.0.0.1"),
+        )
+
+        assert transaction.amount_in_cents == 6_500_100
+
+        # pylint: disable=protected-access
+        payload = gateway._client.create_pse_transaction.await_args.args[1]
+        # pylint: enable=protected-access
+        assert payload["value"] == "65001"
+
     async def test_daviplata_missing_payer_data_raises_value_error(self, monkeypatch):
         gateway = _make_gateway(monkeypatch)
         daviplata = _daviplata_payment_method(full_name="")

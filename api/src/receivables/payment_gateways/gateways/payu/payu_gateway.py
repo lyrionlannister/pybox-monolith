@@ -32,6 +32,9 @@ from receivables.payment_gateways.services.payment_gateway_credential_service im
 from receivables.payment_gateways.utils.payu_status_mapping import (
     payu_transaction_state_to_attempt_status,
 )
+from receivables.payment_gateways.utils.reference_utils import (
+    round_cents_to_whole_currency_cents,
+)
 
 _NOT_SUPPORTED = (
     "PayU solo soporta PSE, NEQUI y BANCOLOMBIA_BUTTON en esta integracion -- "
@@ -181,6 +184,7 @@ class PayUGateway:
             payment_method.address,
             payment_method.city,
         )
+        amount_in_cents = round_cents_to_whole_currency_cents(amount_in_cents)
         address = self._build_address(payment_method.address, payment_method.city)
         order_extra = {
             "order": {
@@ -243,6 +247,7 @@ class PayUGateway:
             payment_method.address,
             payment_method.city,
         )
+        amount_in_cents = round_cents_to_whole_currency_cents(amount_in_cents)
         address = self._build_address(payment_method.address, payment_method.city)
         order_extra = {
             "order": {
@@ -289,6 +294,7 @@ class PayUGateway:
             payment_method.address,
             payment_method.city,
         )
+        amount_in_cents = round_cents_to_whole_currency_cents(amount_in_cents)
         address = self._build_address(payment_method.address, payment_method.city)
         order_extra = {
             "order": {

@@ -24,6 +24,9 @@ from receivables.payment_gateways.services.payment_gateway_credential_service im
 from receivables.payment_gateways.utils.bold_status_mapping import (
     bold_status_to_attempt_status,
 )
+from receivables.payment_gateways.utils.reference_utils import (
+    round_cents_to_whole_currency_cents,
+)
 
 _NOT_SUPPORTED = (
     "Bold no soporta fuentes de pago guardadas ni cobro automático -- "
@@ -94,7 +97,8 @@ class BoldGateway:
         if payment_method is None:
             raise ValueError("create_transaction requiere payment_method.")
 
-        total_amount = amount_in_cents // 100
+        rounded_amount_in_cents = round_cents_to_whole_currency_cents(amount_in_cents)
+        total_amount = rounded_amount_in_cents // 100
         callback_url = (
             f"{get_or_throw('RECEIVABLES_PAYMENT_REDIRECT_RETURN_URL')}"
             f"?reference={reference}"
@@ -124,7 +128,7 @@ class BoldGateway:
         return self._to_transaction(
             response,
             reference,
-            amount_in_cents,
+            rounded_amount_in_cents,
             currency,
             payment_method_payload["name"],
         )

@@ -9,6 +9,7 @@ from receivables.credits.repository.credit_repository import CreditRepository
 from receivables.payment_gateways.enums.payment_gateway_enums import (
     ChargeMode,
     ReceivablesGatewayProvider,
+    ReceivablesPaymentAttemptStatus,
 )
 from receivables.payment_gateways.gateways.resolver import ReceivablesGatewayResolver
 from receivables.payment_gateways.models.payment_attempt_model import (
@@ -114,7 +115,16 @@ class AutomaticChargeService:
             )
 
         tokens = await gateway.get_acceptance_tokens()
-        latest_attempt = await self._attempt_repo.get_latest_by_payment_id(payment.id)
+        latest_attempt = await self._attempt_repo.get_latest_by_payment_id(
+            payment.id, for_update=True
+        )
+        if latest_attempt is not None and latest_attempt.status in (
+            ReceivablesPaymentAttemptStatus.PENDING,
+            ReceivablesPaymentAttemptStatus.APPROVED,
+        ):
+            return AutomaticChargeOutcome(
+                False, None, "Ya hay un intento de cobro en curso para esta cuota."
+            )
         attempt_number = (latest_attempt.attempt_number + 1) if latest_attempt else 1
         amount_in_cents = to_amount_in_cents(payment.payment_amount)
         reference = build_payment_reference(payment.id, attempt_number)
@@ -139,7 +149,7 @@ class AutomaticChargeService:
                 provider_reference=reference,
                 provider_transaction_id=transaction.id,
                 payment_source_id=source.id,
-                expected_amount_cents=amount_in_cents,
+                expected_amount_cents=transaction.amount_in_cents,
                 status=to_attempt_status(transaction.status),
                 provider_payload=transaction.raw,
                 accepted_at=datetime.now(timezone.utc),

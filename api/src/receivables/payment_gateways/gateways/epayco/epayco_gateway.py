@@ -31,6 +31,9 @@ from receivables.payment_gateways.services.payment_gateway_credential_service im
 from receivables.payment_gateways.utils.epayco_status_mapping import (
     epayco_status_to_attempt_status,
 )
+from receivables.payment_gateways.utils.reference_utils import (
+    round_cents_to_whole_currency_cents,
+)
 
 _NOT_SUPPORTED = (
     "ePayco solo soporta PSE y Daviplata en esta integracion -- tarjeta, fuentes de "
@@ -164,10 +167,11 @@ class EpaycoGateway:
                 "documento del pagador."
             )
         name, last_name = _split_full_name(payment_method.full_name or "")
+        rounded_amount_in_cents = round_cents_to_whole_currency_cents(amount_in_cents)
         token = await self._login()
         payload = {
             "bank": payment_method.financial_institution_code,
-            "value": str(amount_in_cents // 100),
+            "value": str(rounded_amount_in_cents // 100),
             "docType": payment_method.user_legal_id_type,
             "docNumber": payment_method.user_legal_id,
             "name": name,
@@ -199,7 +203,7 @@ class EpaycoGateway:
         return GatewayTransaction(
             id=reference_payco,
             status=epayco_status_to_attempt_status(data.get("estado", "")).value,
-            amount_in_cents=amount_in_cents,
+            amount_in_cents=rounded_amount_in_cents,
             currency="COP",
             reference=reference_payco,
             payment_method_type="PSE",
@@ -227,6 +231,7 @@ class EpaycoGateway:
                 "documento del pagador."
             )
         name, last_name = _split_full_name(payment_method.full_name)
+        rounded_amount_in_cents = round_cents_to_whole_currency_cents(amount_in_cents)
         token = await self._login()
         payload = {
             "docType": payment_method.user_legal_id_type,
@@ -240,7 +245,7 @@ class EpaycoGateway:
             "city": payment_method.city,
             "address": payment_method.address,
             "ip": ip_address,
-            "value": str(amount_in_cents // 100),
+            "value": str(rounded_amount_in_cents // 100),
             "urlConfirmation": self._build_notify_url(),
             "methodConfirmation": "POST",
             "testMode": self._is_test,
@@ -259,7 +264,7 @@ class EpaycoGateway:
         return GatewayTransaction(
             id=reference_payco,
             status=epayco_status_to_attempt_status(data.get("estatus", "")).value,
-            amount_in_cents=amount_in_cents,
+            amount_in_cents=rounded_amount_in_cents,
             currency="COP",
             reference=reference_payco,
             payment_method_type="DAVIPLATA",
