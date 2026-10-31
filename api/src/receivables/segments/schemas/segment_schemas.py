@@ -99,8 +99,9 @@ class SegmentExecuteResponse(BaseSchema):
     file_name: str | None = Field(
         default=None, description="Nombre del archivo exportado (modo audit)"
     )
-    file_path: str | None = Field(
-        default=None, description="Ruta del archivo exportado (modo audit)"
+    document_id: uuid.UUID | None = Field(
+        default=None,
+        description="ID del documento con el archivo exportado (modo audit)",
     )
 
 
@@ -109,7 +110,9 @@ class SegmentExecutionResponse(BaseSchema):
     segment_id: uuid.UUID = Field(description="ID del segmento ejecutado")
     mode: str = Field(description="Modo de ejecución: preview o audit")
     file_name: str | None = Field(description="Nombre del archivo exportado")
-    file_path: str | None = Field(description="Ruta del archivo exportado")
+    document_id: uuid.UUID | None = Field(
+        description="ID del documento con el archivo exportado"
+    )
     rows: int = Field(description="Cantidad de filas obtenidas")
     columns: list[str] = Field(description="Nombres de las columnas resultantes")
     executed_by: uuid.UUID = Field(description="ID del usuario que ejecutó el segmento")

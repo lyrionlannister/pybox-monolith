@@ -308,7 +308,7 @@ class TestExecute:
         assert result["success"] is True
         assert result["rows"] == 1
         assert result["file_name"] is None
-        assert result["file_path"] is None
+        assert result["document_id"] is None
         executions = await service.list_executions(segment.id, portfolio.id, session)
         assert len(executions) == 0
 
@@ -342,7 +342,7 @@ class TestExecute:
 
         assert result["rows"] == 2
         assert result["file_name"] is not None
-        assert result["file_path"] is not None
+        assert result["document_id"] is not None
 
         executions = await service.list_executions(segment.id, portfolio.id, session)
         assert len(executions) == 1
