@@ -60,10 +60,10 @@ def encrypted_group_outputs(
     alias_map: dict[str, str], group_by: list[dict[str, Any]]
 ) -> set[str]:
     """Alias de salida de las columnas de agrupación (ya normalizadas) que son
-    cifradas."""
+    cifradas. `alias_map` es alias -> nombre completo (ver `build_table_alias_map`)."""
     encrypted_by_alias = {
         alias: ENCRYPTED_COLUMNS.get(full_name, set())
-        for full_name, alias in alias_map.items()
+        for alias, full_name in alias_map.items()
     }
     return {
         g["output_alias"]
@@ -262,42 +262,28 @@ def build_where_clauses(
 
 
 def build_table_alias_map(tables: list[dict[str, Any]]) -> dict[str, str]:
+    """Alias -> nombre completo (`schema.tabla`) de cada tabla de la consulta.
+
+    Indexado por ALIAS, no por nombre de tabla: el alias ya se valida único acá
+    mismo, así que soporta self-join (la misma tabla dos veces con alias
+    distintos) sin que una entrada pise a la otra -- indexar por nombre de tabla
+    colapsaba la segunda ocurrencia sobre la primera."""
     alias_map: dict[str, str] = {}
-    alias_set: set[str] = set()
     for table in tables:
         schema, table_name = sanitize_table_name(table["name"])
         full_name = f"{schema}.{table_name}"
         alias = table.get("alias") or table_name
         alias = sanitize_identifier(alias, label=f"el alias de la tabla {full_name}")
-        if alias in alias_set:
+        if alias in alias_map:
             raise ValueError(
                 f"El alias de tabla '{alias}' está repetido: cada tabla debe "
                 "tener un alias distinto."
             )
-        alias_set.add(alias)
-        alias_map[full_name] = alias
+        alias_map[alias] = full_name
     return alias_map
 
 
 def resolve_alias(tables: list[dict[str, Any]], table_ref: str | None) -> str:
-    alias_map = build_table_alias_map(tables)
-    if not table_ref:
-        if len(alias_map) == 1:
-            return next(iter(alias_map.values()))
-        raise ValueError(
-            "Cuando hay varias tablas hay que indicar a cuál se refiere cada campo."
-        )
-    ref = str(table_ref).strip()
-    if ref in alias_map.values():
-        return sanitize_identifier(ref, label="el alias de la tabla")
-    schema, table = sanitize_table_name(ref)
-    full_name = f"{schema}.{table}"
-    if full_name not in alias_map:
-        raise ValueError(f"Referencia a una tabla desconocida: '{table_ref}'.")
-    return alias_map[full_name]
-
-
-def resolve_full_table_name(tables: list[dict[str, Any]], table_ref: str | None) -> str:
     alias_map = build_table_alias_map(tables)
     if not table_ref:
         if len(alias_map) == 1:
@@ -307,14 +293,41 @@ def resolve_full_table_name(tables: list[dict[str, Any]], table_ref: str | None)
         )
     ref = str(table_ref).strip()
     if ref in alias_map:
-        return ref
-    for full_name, alias in alias_map.items():
-        if alias == ref:
-            return full_name
+        return sanitize_identifier(ref, label="el alias de la tabla")
     schema, table = sanitize_table_name(ref)
     full_name = f"{schema}.{table}"
-    if full_name not in alias_map:
+    matches = [alias for alias, fn in alias_map.items() if fn == full_name]
+    if not matches:
         raise ValueError(f"Referencia a una tabla desconocida: '{table_ref}'.")
+    if len(matches) > 1:
+        raise ValueError(
+            f"La tabla '{table_ref}' aparece más de una vez en la consulta "
+            "(self-join): indica el alias en vez del nombre de la tabla."
+        )
+    return matches[0]
+
+
+def resolve_full_table_name(tables: list[dict[str, Any]], table_ref: str | None) -> str:
+    alias_map = build_table_alias_map(tables)
+    if not table_ref:
+        if len(alias_map) == 1:
+            return next(iter(alias_map.values()))
+        raise ValueError(
+            "Cuando hay varias tablas hay que indicar a cuál se refiere cada campo."
+        )
+    ref = str(table_ref).strip()
+    if ref in alias_map:
+        return alias_map[ref]
+    schema, table = sanitize_table_name(ref)
+    full_name = f"{schema}.{table}"
+    matches = [alias for alias, fn in alias_map.items() if fn == full_name]
+    if not matches:
+        raise ValueError(f"Referencia a una tabla desconocida: '{table_ref}'.")
+    if len(matches) > 1:
+        raise ValueError(
+            f"La tabla '{table_ref}' aparece más de una vez en la consulta "
+            "(self-join): indica el alias en vez del nombre de la tabla."
+        )
     return full_name
 
 
@@ -384,9 +397,7 @@ def normalize_aggregate_specs(
     if not aggregations:
         raise ValueError("El modo agregación requiere al menos una agregación.")
 
-    default_single_alias = (
-        next(iter(alias_map.values())) if len(alias_map) == 1 else None
-    )
+    default_single_alias = next(iter(alias_map.keys())) if len(alias_map) == 1 else None
 
     normalized_aggregations: list[dict[str, Any]] = []
     for metric in aggregations:
