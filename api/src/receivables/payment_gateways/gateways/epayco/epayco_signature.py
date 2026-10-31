@@ -12,7 +12,13 @@ def verify_epayco_confirmation_signature(
     """SHA256(p_cust_id_cliente^p_key^x_ref_payco^x_transaction_id^x_amount^
     x_currency_code), comparado contra `x_signature`. `customer_id`/`p_key` son
     credenciales propias de ePayco para esto -- NO las mismas `public_key`/
-    `private_key` que autentican contra la API REST (login)."""
+    `private_key` que autentican contra la API REST (login). Un `p_key` vacío
+    (credencial incompleta: `create`/`update` de
+    `OrganizationGatewayCredentialManagementService` no exige campos por proveedor)
+    se rechaza explícitamente -- de lo contrario la firma queda calculable por
+    cualquiera que sepa que ese campo está vacío."""
+    if not p_key:
+        return False
     x_ref_payco = fields.get("x_ref_payco", "")
     x_transaction_id = fields.get("x_transaction_id", "")
     x_amount = fields.get("x_amount", "")
