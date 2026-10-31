@@ -6,6 +6,10 @@ from typing import Any
 
 from pydantic import Field, field_validator
 
+from app_platform.notifications.enums.notification_enums import (
+    NotificationCategory,
+    NotificationType,
+)
 from core.base.schema_base import BaseSchema
 
 
@@ -13,8 +17,8 @@ class NotificationSchema(BaseSchema):
     id: uuid.UUID = Field(description="ID de la notificación")
     title: str = Field(description="Título de la notificación")
     body: str = Field(description="Cuerpo del mensaje")
-    category: str = Field(description="Categoría (portfolio, support, etc.)")
-    notif_type: str = Field(description="Tipo visual: success, error, warning, info")
+    category: NotificationCategory = Field(description="Categoría de la notificación")
+    notif_type: NotificationType = Field(description="Tipo visual de la notificación")
     is_read: bool = Field(description="Indica si el usuario ya leyó la notificación")
     created_at: datetime = Field(description="Fecha de creación")
     link: str | None = Field(default=None, description="URL de destino al hacer clic")
@@ -24,5 +28,5 @@ class NotificationSchema(BaseSchema):
 
     @field_validator("notif_type", mode="before")
     @classmethod
-    def _default_type(cls, v: str | None) -> str:
-        return v or "info"
+    def _default_type(cls, v: NotificationType | None) -> NotificationType:
+        return v or NotificationType.INFO

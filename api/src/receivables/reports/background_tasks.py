@@ -4,6 +4,10 @@ import uuid
 
 from fastapi import HTTPException
 
+from app_platform.notifications.enums.notification_enums import (
+    NotificationCategory,
+    NotificationType,
+)
 from app_platform.notifications.services.notification_service import NotificationService
 from app_platform.schema_manager.services.dml_service import DmlService
 from core.config.logger import logger
@@ -45,8 +49,8 @@ async def execute_and_notify(
                 user_id=user_id,
                 title="Reporte generado",
                 body=f"El archivo '{result['file_name']}' está listo para descargar.",
-                category="report",
-                notif_type="success",
+                category=NotificationCategory.REPORT,
+                notif_type=NotificationType.SUCCESS,
                 link=f"/my-companies/reports?reportId={report_id}",
                 details={
                     "report_id": str(report_id),
@@ -69,8 +73,8 @@ async def execute_and_notify(
                 user_id=user_id,
                 title="Error al generar reporte",
                 body="No fue posible generar el reporte. Intenta de nuevo.",
-                category="report",
-                notif_type="error",
+                category=NotificationCategory.REPORT,
+                notif_type=NotificationType.ERROR,
                 link=f"/my-companies/reports?reportId={report_id}",
             )
     except Exception:
@@ -80,7 +84,7 @@ async def execute_and_notify(
                 user_id=user_id,
                 title="Error al generar reporte",
                 body="No fue posible generar el reporte. Intenta de nuevo.",
-                category="report",
-                notif_type="error",
+                category=NotificationCategory.REPORT,
+                notif_type=NotificationType.ERROR,
                 link=f"/my-companies/reports?reportId={report_id}",
             )

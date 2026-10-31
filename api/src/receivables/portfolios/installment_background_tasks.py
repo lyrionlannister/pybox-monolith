@@ -2,6 +2,10 @@
 
 import uuid
 
+from app_platform.notifications.enums.notification_enums import (
+    NotificationCategory,
+    NotificationType,
+)
 from app_platform.notifications.services.notification_service import NotificationService
 from core.config.logger import logger
 from core.database.database import db
@@ -42,9 +46,13 @@ async def installments_and_notify(
                 f", {result.failed_rows} fallidos" if result.failed_rows > 0 else ""
             )
             notif_type = (
-                "error"
+                NotificationType.ERROR
                 if result.failed_rows == result.total_rows
-                else ("warning" if result.failed_rows > 0 else "success")
+                else (
+                    NotificationType.WARNING
+                    if result.failed_rows > 0
+                    else NotificationType.SUCCESS
+                )
             )
             await notification_service.create_notification(
                 user_id=user_id,
@@ -55,7 +63,7 @@ async def installments_and_notify(
                     f"{result.creditos_liquidados} créditos "
                     f"liquidados{failed_note}."
                 ),
-                category="portfolio",
+                category=NotificationCategory.PORTFOLIO,
                 notif_type=notif_type,
                 link=(
                     f"/my-companies/portfolios?org={organization_id}"

@@ -15,6 +15,10 @@ from app_platform.documents.utils.document_naming import (
     safe_original_name,
 )
 from app_platform.documents.utils.upload_limits import read_within_limit
+from app_platform.notifications.enums.notification_enums import (
+    NotificationCategory,
+    NotificationType,
+)
 from app_platform.notifications.services.notification_service import NotificationService
 from core.security.constants.permissions import PORTFOLIO_JUDICIAL
 from core.security.policies.security_policies import (
@@ -53,15 +57,12 @@ from receivables.judicial_notifications.schemas.judicial_notification_schemas im
 )
 
 # Prioridad judicial → tipo visual de la campana (enum de NotificationModel).
-_PRIORITY_NOTIF_TYPE: dict[JudicialPriority, str] = {
-    JudicialPriority.URGENT: "error",
-    JudicialPriority.MEDIUM: "warning",
-    JudicialPriority.LOW: "info",
-    JudicialPriority.INFORMATIVE: "info",
+_PRIORITY_NOTIF_TYPE: dict[JudicialPriority, NotificationType] = {
+    JudicialPriority.URGENT: NotificationType.ERROR,
+    JudicialPriority.MEDIUM: NotificationType.WARNING,
+    JudicialPriority.LOW: NotificationType.INFO,
+    JudicialPriority.INFORMATIVE: NotificationType.INFO,
 }
-
-# Categoría con la que viaja el evento SSE, para que el front sepa refrescar el buzón.
-JUDICIAL_NOTIFICATION_CATEGORY = "judicial"
 
 
 class JudicialNotificationService:
@@ -289,7 +290,7 @@ class JudicialNotificationService:
                 user_id=user.id,
                 title="Nueva notificación judicial",
                 body=f"{response.entity_name} · {response.title}",
-                category=JUDICIAL_NOTIFICATION_CATEGORY,
+                category=NotificationCategory.JUDICIAL,
                 notif_type=_PRIORITY_NOTIF_TYPE[response.priority],
                 link="/home",
                 details={
@@ -312,8 +313,8 @@ class JudicialNotificationService:
             user_id=notification.created_by,
             title="Notificación judicial vista",
             body=f"{debtor.full_name} vio la notificación «{notification.title}».",
-            category=JUDICIAL_NOTIFICATION_CATEGORY,
-            notif_type="info",
+            category=NotificationCategory.JUDICIAL,
+            notif_type=NotificationType.INFO,
             link="/home",
             details={
                 "judicialNotificationId": str(notification.id),

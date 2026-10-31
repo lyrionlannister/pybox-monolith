@@ -12,6 +12,10 @@ from app_platform.documents.enums.document_enums import MAX_DOCUMENT_SIZE_BYTES
 from app_platform.documents.models.document_model import DocumentModel
 from app_platform.documents.services.document_service import DocumentService
 from app_platform.documents.utils.upload_limits import read_within_limit
+from app_platform.notifications.enums.notification_enums import (
+    NotificationCategory,
+    NotificationType,
+)
 from app_platform.notifications.services.notification_service import NotificationService
 from app_platform.support.enums.support_enums import (
     IdentityTopic,
@@ -630,8 +634,8 @@ class SupportService:
             user_id=data.user_id,
             title="Ticket asignado",
             body=f"Se te asignó el ticket de soporte #{ticket.ticket_number}.",
-            category="support",
-            notif_type="info",
+            category=NotificationCategory.SUPPORT,
+            notif_type=NotificationType.INFO,
             link=f"/cs/tickets/{ticket.ticket_number}",
         )
         return SupportTicketSchema.model_validate(updated)
@@ -781,8 +785,8 @@ class SupportService:
                 user_id=uid,
                 title="Nuevo mensaje en ticket",
                 body=f"Mensaje en ticket #{ticket.ticket_number}.",
-                category="support_message",
-                notif_type="info",
+                category=NotificationCategory.SUPPORT_MESSAGE,
+                notif_type=NotificationType.INFO,
                 link=f"/cs/tickets/{ticket.ticket_number}",
                 details={"ticket_number": ticket.ticket_number},
             )
@@ -987,8 +991,8 @@ class SupportService:
             user_id=agent_id,
             title="Nuevo ticket asignado",
             body=f"Se te asignó un ticket de soporte #{ticket.ticket_number}.",
-            category="support",
-            notif_type="info",
+            category=NotificationCategory.SUPPORT,
+            notif_type=NotificationType.INFO,
             link=f"/cs/tickets/{ticket.ticket_number}",
         )
 
@@ -1031,7 +1035,7 @@ class SupportService:
                 user_id=user_id,
                 title=title,
                 body=body,
-                category="org_verification",
+                category=NotificationCategory.ORG_VERIFICATION,
             )
 
     async def _resolve_identity_verification(
@@ -1073,5 +1077,5 @@ class SupportService:
             user_id=user_id,
             title=title,
             body=body,
-            category="identity_verification",
+            category=NotificationCategory.IDENTITY_VERIFICATION,
         )

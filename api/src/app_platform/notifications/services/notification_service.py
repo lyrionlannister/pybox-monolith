@@ -5,6 +5,10 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app_platform.notifications.enums.notification_enums import (
+    NotificationCategory,
+    NotificationType,
+)
 from app_platform.notifications.models.notification_model import NotificationModel
 from app_platform.notifications.repository.notification_repository import (
     NotificationRepository,
@@ -35,8 +39,8 @@ class NotificationService:
         user_id: uuid.UUID,
         title: str,
         body: str,
-        category: str,
-        notif_type: str = "info",
+        category: NotificationCategory,
+        notif_type: NotificationType = NotificationType.INFO,
         link: str | None = None,
         details: dict[str, Any] | None = None,
     ) -> NotificationSchema:
