@@ -47,37 +47,37 @@ y el proyecto exige `python >=3.14`. Verificado compilando los archivos afectado
 
 ## Medio
 
-- [ ] **Firma de webhook fail-open si secreto vacío (Bold)** — `api/src/receivables/payment_gateways/gateways/bold/bold_signature.py:16-21`.
+- [x] **Firma de webhook fail-open si secreto vacío (Bold)** — `api/src/receivables/payment_gateways/gateways/bold/bold_signature.py:16-21`.
       Acepta `secret_key` vacío sin distinguir sandbox/producción; si una org de
       producción queda con credencial incompleta, la firma es falsificable (HMAC con
       llave conocida = "").
-- [ ] **Firma de webhook fail-open si secreto vacío (ePayco)** — `api/src/receivables/payment_gateways/gateways/epayco/epayco_gateway.py:90-91,375-381`.
+- [x] **Firma de webhook fail-open si secreto vacío (ePayco)** — `api/src/receivables/payment_gateways/gateways/epayco/epayco_gateway.py:90-91,375-381`.
       Mismo patrón: `p_key` vacío no se rechaza antes de calcular el hash.
-- [ ] **OTP sin límite de intentos propio** — `api/src/identity/auth/repository/verification_code_repository.py:35-54`
+- [x] **OTP sin límite de intentos propio** — `api/src/identity/auth/repository/verification_code_repository.py:35-54`
       + `auth/services/verification_service.py:88-122`. Solo protegido por rate-limit
       de IP compartido entre los 4 pasos de forgot-password; sin lockout por
       `user_id` ni invalidación tras N intentos fallidos.
-- [ ] **Fuga de memoria lenta en caché de contexto IVR** — `api/src/messaging/ivr/services/ivr_event_service.py:99`
+- [x] **Fuga de memoria lenta en caché de contexto IVR** — `api/src/messaging/ivr/services/ivr_event_service.py:99`
       (`_bulk_context_cache`). Dict a nivel de módulo sin TTL ni límite de tamaño,
       crece indefinidamente con cada `bulk_id` nuevo.
-- [ ] **Dinero como float en respuesta de chat WhatsApp** — `api/src/messaging/whatsapp/services/whatsapp_chat_service.py:327-331`.
+- [x] **Dinero como float en respuesta de chat WhatsApp** — `api/src/messaging/whatsapp/services/whatsapp_chat_service.py:327-331`.
       Convierte `total_credit_balance`/`overdue_principal_balance` (Decimal) a float.
-- [ ] **Dinero como float en dashboard** — `api/src/app_platform/dashboard/schemas/dashboard_schemas.py:21-25`
+- [x] **Dinero como float en dashboard** — `api/src/app_platform/dashboard/schemas/dashboard_schemas.py:21-25`
       (`OrganizationStatsResponse.total_overdue_amount`). El valor viene de un `SUM`
       sobre `Numeric`/`Decimal` y se tipa `float` en el schema de respuesta.
-- [ ] **Mensajes de chat WhatsApp sin paginar** — `api/src/messaging/whatsapp/repository/whatsapp_message_repository.py:41-50` (`list_by_chat`).
+- [x] **Mensajes de chat WhatsApp sin paginar** — `api/src/messaging/whatsapp/repository/whatsapp_message_repository.py:41-50` (`list_by_chat`).
       Trae todos los mensajes del hilo en una query; hilos largos acumulan miles.
 - [ ] **Falta índice `(organization_id, sent_at)`** — `api/src/messaging/contacts/models/contact_model.py:51`.
       Usado en filtros de rango de fecha para facturación y en `ORDER BY`, sin índice
       compuesto, sobre tabla de crecimiento no acotado.
-- [ ] **Logo de branding sin límite de tamaño ni verificación de magic bytes** — `api/src/app_platform/branding/controllers/platform_branding_controller.py:57`
+- [x] **Logo de branding sin límite de tamaño ni verificación de magic bytes** — `api/src/app_platform/branding/controllers/platform_branding_controller.py:57`
       + `branding/services/platform_branding_service.py:40-61` (`replace_logo`).
       Usa `store_generated()` (pensado para artefactos internos) para una subida de
       usuario real.
-- [ ] **Código duplicado: `read_within_limit`** — `api/src/app_platform/support/services/support_service.py:910-929`
+- [x] **Código duplicado: `read_within_limit`** — `api/src/app_platform/support/services/support_service.py:910-929`
       (`_read_within_limit`) reimplementa casi textual la utilidad compartida en
       `documents/utils/upload_limits.py` en vez de importarla.
-- [ ] **Queries en loop al crear grupo de chat** — `api/src/app_platform/chats/services/chat_service.py:392-395`
+- [x] **Queries en loop al crear grupo de chat** — `api/src/app_platform/chats/services/chat_service.py:392-395`
       (`create_group_chat`). `add_member` por miembro (flush+refresh individual) en
       vez de `add_all` + flush único.
 - [ ] **Enums sin constraint de BD en chats** — `api/src/app_platform/chats/models/chat_model.py:16` (`type`)
@@ -93,11 +93,11 @@ y el proyecto exige `python >=3.14`. Verificado compilando los archivos afectado
 - [ ] **Repos de `segments` sin cascada de soft-delete por organización** — `api/src/receivables/segments/repository/segment_repository.py`
       y `segment_execution_repository.py`. A diferencia del resto del dominio
       `receivables`, no cascadean al borrar (soft-delete) una organización.
-- [ ] **Doble chequeo de permiso redundante** — `api/src/messaging/campaigns/services/campaign_service.py:370-371,436-445`.
+- [x] **Doble chequeo de permiso redundante** — `api/src/messaging/campaigns/services/campaign_service.py:370-371,436-445`.
       `update()`/`activate()` llaman `_check_portfolio_access` explícito y luego
       `get_by_id()` lo repite internamente — no es falla de seguridad, es query
       redundante.
-- [ ] **`list_table_fields` expone metadata de esquema fuera de catálogo** — `api/src/app_platform/schema_manager/controllers/database_controller.py:69-86`.
+- [x] **`list_table_fields` expone metadata de esquema fuera de catálogo** — `api/src/app_platform/schema_manager/controllers/database_controller.py:69-86`.
       Solo exige `require_org_or_global` (cualquier usuario con organización, no solo
       admin global) y no valida `schema_name`/`table_name` contra `TENANT_SCOPED_TABLES`;
       cualquier usuario puede inspeccionar columnas/tipos/enums de cualquier tabla
