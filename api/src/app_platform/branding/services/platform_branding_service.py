@@ -2,7 +2,7 @@
 
 import uuid
 
-from fastapi import HTTPException, Response, status
+from fastapi import HTTPException, Response, UploadFile, status
 
 from app_platform.branding.models.platform_branding_model import PlatformBrandingModel
 from app_platform.branding.repository.platform_branding_repository import (
@@ -12,7 +12,6 @@ from app_platform.branding.schemas.platform_branding_schemas import (
     PlatformBrandingResponse,
 )
 from app_platform.documents.services.document_service import DocumentService
-from app_platform.documents.utils.document_naming import resolve_content_type
 
 # Prefijo del dominio en la clave del objeto (`<dominio>/<dueno>/<uuid><ext>`), mismo
 # esquema que ORGANIZATION_DOCUMENT_STORAGE_DOMAIN pero sin dueño real: el logo global
@@ -38,16 +37,18 @@ class PlatformBrandingService:
         return branding
 
     async def replace_logo(
-        self, file_bytes: bytes, filename: str, uploaded_by: uuid.UUID
+        self, file: UploadFile, uploaded_by: uuid.UUID
     ) -> PlatformBrandingModel:
         """Espejo de OrganizationService.replace_document: el logo anterior se da de
         baja al final y no antes -- si la subida del nuevo falla, la plataforma se
-        queda con el que tenía en vez de sin ninguno."""
+        queda con el que tenía en vez de sin ninguno.
+
+        Usa `store()` (no `store_generated()`): el logo es una subida de usuario real,
+        no un artefacto generado por la propia API, así que debe pasar por el límite de
+        tamaño y la verificación de magic bytes igual que cualquier otra."""
         branding = await self.get_singleton()
-        document = await self._document_service.store_generated(
-            content=file_bytes,
-            filename=filename,
-            content_type=resolve_content_type(filename),
+        document = await self._document_service.store(
+            file=file,
             domain=PLATFORM_BRANDING_STORAGE_DOMAIN,
             owner_id=PLATFORM_BRANDING_OWNER_ID,
             uploaded_by=uploaded_by,
