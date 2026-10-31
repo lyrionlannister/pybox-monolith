@@ -384,15 +384,21 @@ class ChatService:
         )
         chat = await self.chat_repo.add(chat)
 
-        await self.chat_repo.add_member(
-            ChatMemberModel(
-                chat_id=chat.id, user_id=actor_session.user_id, role=MemberRole.OWNER
-            )
+        await self.chat_repo.add_members(
+            [
+                ChatMemberModel(
+                    chat_id=chat.id,
+                    user_id=actor_session.user_id,
+                    role=MemberRole.OWNER,
+                ),
+                *(
+                    ChatMemberModel(
+                        chat_id=chat.id, user_id=uid, role=MemberRole.MEMBER
+                    )
+                    for uid in others
+                ),
+            ]
         )
-        for uid in others:
-            await self.chat_repo.add_member(
-                ChatMemberModel(chat_id=chat.id, user_id=uid, role=MemberRole.MEMBER)
-            )
 
         return await self._build_summary(chat, actor_session.user_id)
 

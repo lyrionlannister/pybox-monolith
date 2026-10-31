@@ -37,6 +37,13 @@ class ChatRepository(SoftDeleteRepositoryBase[ChatModel]):
         await self.session.refresh(member)
         return member
 
+    async def add_members(self, members: list[ChatMemberModel]) -> None:
+        """Alta en lote (un solo `flush`, sin `refresh` por fila): para cuando el
+        llamador no necesita cada fila de vuelta, como al crear un grupo con varios
+        miembros de una vez (ver `ChatService.create_group_chat`)."""
+        self.session.add_all(members)
+        await self.session.flush()
+
     async def get_member(
         self, chat_id: uuid.UUID, user_id: uuid.UUID
     ) -> ChatMemberModel | None:
