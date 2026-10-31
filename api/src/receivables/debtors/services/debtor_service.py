@@ -330,7 +330,7 @@ class DebtorService:
         # Normalizar antes de insertar: EMAIL en minúsculas; PHONE con indicativo
         # del país del portafolio del deudor. Mantiene los contactos comparables
         # con el dato autogestionado.
-        phone_prefix = await self._resolve_debtor_phone_prefix(debtor_id)
+        phone_prefix = await self._resolve_debtor_phone_prefix(debtor_id, portfolio_id)
         value = normalize_contact_value(
             data.contact_type, data.contact_value, phone_prefix
         )
@@ -342,13 +342,28 @@ class DebtorService:
             )
         )
 
-    async def _resolve_debtor_phone_prefix(self, debtor_id: uuid.UUID) -> str | None:
-        """Indicativo telefónico del país del portafolio del deudor (por su
-        crédito más reciente)."""
+    async def _resolve_debtor_phone_prefix(
+        self, debtor_id: uuid.UUID, portfolio_id: uuid.UUID | None = None
+    ) -> str | None:
+        """Indicativo telefónico del país del portafolio del deudor.
+
+        Si se conoce el `portfolio_id` de la operación en curso, se usa ESE
+        portafolio (un deudor puede tener créditos en portafolios de países
+        distintos dentro de la misma empresa); si no hay un crédito ahí o no se
+        pasó `portfolio_id` (ej. admin global), cae al crédito más reciente del
+        deudor en cualquier portafolio."""
         credits = await self.credit_repo.get_by_debtor_id(debtor_id)
         if not credits:
             return None
-        portfolio = await self.portfolio_repo.get_by_id(credits[0].portfolio_id)
+        credit = next(
+            (
+                c
+                for c in credits
+                if portfolio_id is not None and c.portfolio_id == portfolio_id
+            ),
+            credits[0],
+        )
+        portfolio = await self.portfolio_repo.get_by_id(credit.portfolio_id)
         if portfolio is None:
             return None
         return await self._country_repo.get_phone_prefix(portfolio.country)
