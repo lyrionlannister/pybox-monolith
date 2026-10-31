@@ -13,6 +13,7 @@ from identity.auth.services.oauth_provider_service import (
     OAuthProviderService,
     ProviderProfile,
 )
+from identity.auth.services.verification_service import MAX_FAILED_ATTEMPTS
 from identity.users.enums.user_enums import UserRole, UserScope
 from messaging.providers.email_provider import NRS360EmailProvider
 from tests.factories import (
@@ -472,6 +473,59 @@ class TestForgotPassword:
                 "document_type": payload["document_type"],
                 "document_number": payload["document_number"],
                 "code": "000000",
+                "channel": "EMAIL",
+            },
+        )
+        assert resp.status_code == 400
+
+    async def test_verify_code_locks_out_after_too_many_wrong_attempts(
+        self, client, db_session
+    ):
+        """OTP de 6 dígitos sin límite propio de intentos quedaba adivinable dentro
+        de su ventana de 5 minutos si el atacante usaba varias IPs (el rate-limit del
+        controller es por IP). Tras MAX_FAILED_ATTEMPTS intentos fallidos, el código
+        correcto también debe rechazarse (tratado como expirado)."""
+        payload = register_payload()
+        await client.post(f"{BASE}/register/user", json=payload)
+        await client.post(
+            f"{BASE}/forgot-password/send-code",
+            json={
+                "document_type": payload["document_type"],
+                "document_number": payload["document_number"],
+                "channel": "EMAIL",
+            },
+        )
+        user = await get_user_by_email(db_session, payload["email"])
+        code_row = (
+            (
+                await db_session.execute(
+                    select(VerificationCodeModel)
+                    .where(VerificationCodeModel.user_id == user.id)
+                    .order_by(VerificationCodeModel.created_at.desc())
+                )
+            )
+            .scalars()
+            .first()
+        )
+
+        for _ in range(MAX_FAILED_ATTEMPTS):
+            resp = await client.post(
+                f"{BASE}/forgot-password/verify-code",
+                json={
+                    "document_type": payload["document_type"],
+                    "document_number": payload["document_number"],
+                    "code": "000000",
+                    "channel": "EMAIL",
+                },
+            )
+            assert resp.status_code == 400
+
+        resp = await client.post(
+            f"{BASE}/forgot-password/verify-code",
+            json={
+                "document_type": payload["document_type"],
+                "document_number": payload["document_number"],
+                "code": code_row.code,
                 "channel": "EMAIL",
             },
         )
