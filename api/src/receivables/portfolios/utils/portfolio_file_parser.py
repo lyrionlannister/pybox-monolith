@@ -13,6 +13,7 @@ from app_platform.countries.enums.country_enums import (
 )
 from receivables.contact_methods.enums.contact_method_enums import ContactMethodType
 from receivables.credits.enums.credit_enums import CREDIT_TYPE_ALIASES, CreditTypes
+from receivables.debtors.enums.address_enums import AddressType
 from receivables.debtors.enums.debtor_enums import DebtorType
 from receivables.portfolios.constants.portfolio_csv_constants import (
     DATE_FORMATS,
@@ -106,7 +107,7 @@ class PortfolioFileParser:
 
         debtor = self._build_debtor(raw, document_number)
         codebtor = self._build_codebtor(raw)
-        primary_address = self._build_address(raw, "PRIMARY")
+        primary_address = self._build_address(raw, AddressType.PRIMARY)
         secondary_address = self._build_secondary_address(raw)
         debtor_contacts = self._build_contacts(raw, "Telefono", "Correo Electronico")
         codebtor_contacts = (
@@ -160,28 +161,30 @@ class PortfolioFileParser:
             debtor_type=DebtorType.CO_DEBTOR,
         )
 
-    def _build_address(self, raw: dict[str, Any], address_type: str) -> AddressRowData:
-        if address_type == "PRIMARY":
+    def _build_address(
+        self, raw: dict[str, Any], address_type: AddressType
+    ) -> AddressRowData:
+        if address_type == AddressType.PRIMARY:
             return AddressRowData(
                 address=self._normalize_str(raw.get("Direccion")) or "",
                 city=self._normalize_str(raw.get("Ciudad")) or "",
                 state=self._normalize_str(raw.get("Departamento")) or "",
                 country="Colombia",
-                address_type="PRIMARY",
+                address_type=AddressType.PRIMARY,
             )
         return AddressRowData(
             address=self._normalize_str(raw.get("Direccion 2")) or "",
             city=self._normalize_str(raw.get("Ciudad 2")) or "",
             state=self._normalize_str(raw.get("Departamento 2")) or "",
             country="Colombia",
-            address_type="SECONDARY",
+            address_type=AddressType.SECONDARY,
         )
 
     def _build_secondary_address(self, raw: dict[str, Any]) -> AddressRowData | None:
         city2 = self._normalize_str(raw.get("Ciudad 2"))
         if not city2:
             return None
-        return self._build_address(raw, "SECONDARY")
+        return self._build_address(raw, AddressType.SECONDARY)
 
     def _build_contacts(
         self,

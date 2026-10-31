@@ -117,10 +117,17 @@ y el proyecto exige `python >=3.14`. Verificado compilando los archivos afectado
       Ya marcado como `shortcut` en el propio código, pendiente de confirmar con doc de Bold.
 - [ ] **Serialización de Decimal a float en query builder** — `api/src/app_platform/schema_manager/utils/query_utils.py:24-26` (`serialize_value`).
       Restringido a admin global, solo lectura — bajo riesgo pero mismo patrón.
-- [ ] **Enums libres de dominio cerrado** — `api/src/receivables/portfolios/models/portfolio_daily_counter_config_model.py:27-29`
-      (`reactivation_mode`), `debtors/models/address_model.py:19-21` (`address_type`),
-      `credits/models/credit_adjustment_model.py:24-26` (`adjustment_type`). `String`
-      libre en vez de `sa.Enum` nativo.
+- [x] **Enums libres de dominio cerrado** — resuelto solo para `address_type`
+      (`debtors/models/address_model.py` → `AddressType` nativo, 2 valores
+      `PRIMARY`/`SECONDARY` confirmados en uso real con lógica que rama sobre ellos
+      en `portfolio_file_parser.py`). `reactivation_mode`
+      (`portfolio_daily_counter_config_model.py`) y `adjustment_type`
+      (`credit_adjustment_model.py`) se dejaron como `String`: al revisar el código
+      no hay un conjunto cerrado real todavía — cada uno tiene un único valor en
+      uso en todo el repo (`"FROM_TODAY"`, `"CONDONACION"`), nunca se rama sobre
+      otro valor, y el propio schema de `reactivation_mode` documenta "FROM_TODAY u
+      otro" (abierto a futuro a propósito). Convertirlos a ENUM ahora sería cerrar
+      un dominio que el propio código todavía no definió.
 - [ ] **Prefijo telefónico resuelto sin filtrar por portafolio** — `api/src/receivables/debtors/services/debtor_service.py:345-354`
       (`_resolve_debtor_phone_prefix`). Usa el crédito más reciente del deudor sin
       filtrar por `portfolio_id` de la operación en curso; si el deudor tiene créditos

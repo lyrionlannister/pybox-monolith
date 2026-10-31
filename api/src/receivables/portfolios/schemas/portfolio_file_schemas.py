@@ -13,6 +13,7 @@ from decimal import Decimal
 from app_platform.countries.enums.country_enums import UserDocumentType
 from receivables.contact_methods.enums.contact_method_enums import ContactMethodType
 from receivables.credits.enums.credit_enums import CreditTypes
+from receivables.debtors.enums.address_enums import AddressType
 from receivables.debtors.enums.debtor_enums import DebtorType
 
 
@@ -30,7 +31,7 @@ class AddressRowData:
     city: str
     state: str
     country: str
-    address_type: str
+    address_type: AddressType
 
 
 @dataclass(frozen=True)

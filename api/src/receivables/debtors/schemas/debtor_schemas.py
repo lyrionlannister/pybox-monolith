@@ -10,6 +10,7 @@ from app_platform.countries.enums.country_enums import UserDocumentType
 from core.base.schema_base import BaseSchema
 from receivables.contact_methods.enums.contact_method_enums import ContactMethodType
 from receivables.credits.enums.credit_enums import CreditTypes
+from receivables.debtors.enums.address_enums import AddressType
 from receivables.debtors.enums.debtor_enums import DebtorType
 
 
@@ -19,7 +20,7 @@ class AddressResponse(BaseSchema):
     city: str = Field(description="Ciudad")
     state: str = Field(description="Departamento o estado")
     country: str = Field(description="País")
-    address_type: str = Field(description="Tipo de dirección (PRIMARY, etc.)")
+    address_type: AddressType = Field(description="Tipo de dirección")
 
 
 class ContactMethodResponse(BaseSchema):
@@ -79,7 +80,9 @@ class CreateAddressRequest(BaseSchema):
     city: str = Field(description="Ciudad")
     state: str = Field(description="Departamento o estado")
     country: str = Field(description="País")
-    address_type: str = Field(default="PRIMARY", description="Tipo de dirección")
+    address_type: AddressType = Field(
+        default=AddressType.PRIMARY, description="Tipo de dirección"
+    )
 
 
 class CreateContactMethodRequest(BaseSchema):
