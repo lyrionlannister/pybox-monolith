@@ -416,9 +416,21 @@ class UserService:
             user.firstname = data.firstname
         if data.lastname is not None:
             user.lastname = data.lastname
-        if data.email is not None:
+        if data.email is not None and data.email != user.email:
+            existing = await self.user_repo.get_by_email(data.email)
+            if existing is not None and existing.id != user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Ya existe un usuario con ese correo electrónico.",
+                )
             user.email = data.email
-        if data.phone_number is not None:
+        if data.phone_number is not None and data.phone_number != user.phone_number:
+            existing = await self.user_repo.get_by_phone_number(data.phone_number)
+            if existing is not None and existing.id != user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Ya existe un usuario con ese número de teléfono.",
+                )
             user.phone_number = data.phone_number
         if data.is_active is not None:
             user.is_active = data.is_active
@@ -432,12 +444,20 @@ class UserService:
                 user.document_number = None
                 user.document_number_hash = None
             else:
+                new_hash = encrypt_service.hash_document(data.document_number)
+                if new_hash != user.document_number_hash:
+                    existing = await self.user_repo.get_by_document(
+                        user.document_type, new_hash
+                    )
+                    if existing is not None and existing.id != user.id:
+                        raise HTTPException(
+                            status_code=status.HTTP_409_CONFLICT,
+                            detail="Ya existe un usuario con ese número de documento.",
+                        )
                 user.document_number = encrypt_service.encrypt_to_str(
                     data.document_number
                 )
-                user.document_number_hash = encrypt_service.hash_document(
-                    data.document_number
-                )
+                user.document_number_hash = new_hash
         if data.mfa_enabled is not None:
             user.mfa_enabled = data.mfa_enabled
         await self.user_repo.update(user)
