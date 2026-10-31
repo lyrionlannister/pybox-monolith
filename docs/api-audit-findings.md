@@ -67,7 +67,7 @@ y el proyecto exige `python >=3.14`. Verificado compilando los archivos afectado
       sobre `Numeric`/`Decimal` y se tipa `float` en el schema de respuesta.
 - [x] **Mensajes de chat WhatsApp sin paginar** — `api/src/messaging/whatsapp/repository/whatsapp_message_repository.py:41-50` (`list_by_chat`).
       Trae todos los mensajes del hilo en una query; hilos largos acumulan miles.
-- [ ] **Falta índice `(organization_id, sent_at)`** — `api/src/messaging/contacts/models/contact_model.py:51`.
+- [x] **Falta índice `(organization_id, sent_at)`** — `api/src/messaging/contacts/models/contact_model.py:51`.
       Usado en filtros de rango de fecha para facturación y en `ORDER BY`, sin índice
       compuesto, sobre tabla de crecimiento no acotado.
 - [x] **Logo de branding sin límite de tamaño ni verificación de magic bytes** — `api/src/app_platform/branding/controllers/platform_branding_controller.py:57`
@@ -80,17 +80,17 @@ y el proyecto exige `python >=3.14`. Verificado compilando los archivos afectado
 - [x] **Queries en loop al crear grupo de chat** — `api/src/app_platform/chats/services/chat_service.py:392-395`
       (`create_group_chat`). `add_member` por miembro (flush+refresh individual) en
       vez de `add_all` + flush único.
-- [ ] **Enums sin constraint de BD en chats** — `api/src/app_platform/chats/models/chat_model.py:16` (`type`)
+- [x] **Enums sin constraint de BD en chats** — `api/src/app_platform/chats/models/chat_model.py:16` (`type`)
       y `chat_member_model.py:33` (`role`). `IntEnum` en Python pero columna
       `SmallInteger` plana, sin ENUM nativo ni CHECK.
-- [ ] **Enum libre sin justificar en notificaciones** — `api/src/app_platform/notifications/models/notification_model.py:25-28`
+- [x] **Enum libre sin justificar en notificaciones** — `api/src/app_platform/notifications/models/notification_model.py:25-28`
       (`category`, `notif_type`). Conjunto cerrado de valores modelado como `String`
       libre, sin constraint ni comentario de excepción (a diferencia de
       `support.system_topic`, que sí lo documenta).
-- [ ] **`segment_execution_model.file_path` sin FK** — `api/src/receivables/segments/models/segment_execution_model.py:27-29`.
+- [x] **`segment_execution_model.file_path` sin FK** — `api/src/receivables/segments/models/segment_execution_model.py:27-29`.
       Guarda el id del documento exportado como texto libre; el equivalente
       `report_execution_model.py:36-43` ya resolvió esto con `document_id` FK.
-- [ ] **Repos de `segments` sin cascada de soft-delete por organización** — `api/src/receivables/segments/repository/segment_repository.py`
+- [x] **Repos de `segments` sin cascada de soft-delete por organización** — `api/src/receivables/segments/repository/segment_repository.py`
       y `segment_execution_repository.py`. A diferencia del resto del dominio
       `receivables`, no cascadean al borrar (soft-delete) una organización.
 - [x] **Doble chequeo de permiso redundante** — `api/src/messaging/campaigns/services/campaign_service.py:370-371,436-445`.
@@ -107,15 +107,15 @@ y el proyecto exige `python >=3.14`. Verificado compilando los archivos afectado
 
 ## Bajo
 
-- [ ] **Unicidad no validada en `update_user`** — `api/src/identity/users/services/user_service.py:415-443`.
+- [x] **Unicidad no validada en `update_user`** — `api/src/identity/users/services/user_service.py:415-443`.
       No valida `email`/`document_number` únicos antes de guardar; termina en
       `IntegrityError` no capturado (500 genérico) en vez de 409 controlado.
-- [ ] **Resolución de gateway por país sin guard** — `api/src/billing/gateways/resolver.py:37`.
+- [x] **Resolución de gateway por país sin guard** — `api/src/billing/gateways/resolver.py:37`.
       País no listado cae a Bold (exclusivo CO) sin fallar explícito; sin test que
       mantenga sincronizado con `Nationality`.
 - [ ] **Payload de tarjeta Bold sin dirección de facturación** — `api/src/receivables/payment_gateways/gateways/bold/bold_gateway.py:135-150`.
       Ya marcado como `shortcut` en el propio código, pendiente de confirmar con doc de Bold.
-- [ ] **Serialización de Decimal a float en query builder** — `api/src/app_platform/schema_manager/utils/query_utils.py:24-26` (`serialize_value`).
+- [x] **Serialización de Decimal a float en query builder** — `api/src/app_platform/schema_manager/utils/query_utils.py:24-26` (`serialize_value`).
       Restringido a admin global, solo lectura — bajo riesgo pero mismo patrón.
 - [x] **Enums libres de dominio cerrado** — resuelto solo para `address_type`
       (`debtors/models/address_model.py` → `AddressType` nativo, 2 valores
@@ -128,11 +128,11 @@ y el proyecto exige `python >=3.14`. Verificado compilando los archivos afectado
       otro valor, y el propio schema de `reactivation_mode` documenta "FROM_TODAY u
       otro" (abierto a futuro a propósito). Convertirlos a ENUM ahora sería cerrar
       un dominio que el propio código todavía no definió.
-- [ ] **Prefijo telefónico resuelto sin filtrar por portafolio** — `api/src/receivables/debtors/services/debtor_service.py:345-354`
+- [x] **Prefijo telefónico resuelto sin filtrar por portafolio** — `api/src/receivables/debtors/services/debtor_service.py:345-354`
       (`_resolve_debtor_phone_prefix`). Usa el crédito más reciente del deudor sin
       filtrar por `portfolio_id` de la operación en curso; si el deudor tiene créditos
       en portafolios de países distintos, puede tomar el prefijo equivocado.
-- [ ] **`build_table_alias_map` no soporta self-join** — `api/src/app_platform/schema_manager/utils/query_utils.py:262-277`.
+- [x] **`build_table_alias_map` no soporta self-join** — `api/src/app_platform/schema_manager/utils/query_utils.py:262-277`.
       Indexa por `schema.tabla`, no por alias; dos entradas de la misma tabla con
       alias distintos se pisan. Falla segura (error de Postgres manejado), pero
       bloquea un caso de uso legítimo sin mensaje claro.
