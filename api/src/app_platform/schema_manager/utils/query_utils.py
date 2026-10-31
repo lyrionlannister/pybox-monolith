@@ -23,7 +23,9 @@ from core.security.services.encrypt_service import encrypt_service
 
 def serialize_value(value: Any) -> Any:
     if isinstance(value, Decimal):
-        return float(value)
+        # str, no float: esto sale del resultado del query builder dinamico
+        # (DmlService) tal cual a la respuesta JSON -- float perderia precision.
+        return str(value)
     if isinstance(value, (datetime, date)):
         return value.isoformat()
     if isinstance(value, bytes):

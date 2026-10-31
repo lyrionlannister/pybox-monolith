@@ -7,6 +7,8 @@ filtros comunes (igualdad, IN, BETWEEN, LIKE/contiene) y que un identificador
 inválido se rechaza antes de llegar a componerse en SQL.
 """
 
+from decimal import Decimal
+
 import pytest
 from cryptography.exceptions import InvalidTag
 
@@ -25,6 +27,7 @@ from app_platform.schema_manager.utils.query_utils import (
     resolve_full_table_name,
     sanitize_identifier,
     sanitize_table_name,
+    serialize_value,
     sql_literal,
 )
 from core.security.services.encrypt_service import encrypt_service
@@ -465,3 +468,14 @@ class TestNormalizeAggregateSpecs:
                 [],
                 [],
             )
+
+
+class TestSerializeValue:
+    def test_decimal_becomes_string_not_float(self):
+        """float(Decimal("0.1")) pierde precision -- str no."""
+        assert serialize_value(Decimal("12345.6789012345")) == "12345.6789012345"
+
+    def test_passthrough_for_other_types(self):
+        assert serialize_value("texto") == "texto"
+        assert serialize_value(42) == 42
+        assert serialize_value(None) is None
