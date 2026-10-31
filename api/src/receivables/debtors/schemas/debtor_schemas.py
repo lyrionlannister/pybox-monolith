@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import Field
 
@@ -91,8 +92,8 @@ class DebtorCreditResponse(BaseSchema):
     credit_number: str = Field(description="Número de crédito")
     credit_type: CreditTypes = Field(description="Tipo de crédito")
     disbursed_date: datetime = Field(description="Fecha de desembolso")
-    total_credit_balance: float = Field(description="Saldo total del crédito")
-    overdue_principal_balance: float = Field(description="Saldo capital en mora")
+    total_credit_balance: Decimal = Field(description="Saldo total del crédito")
+    overdue_principal_balance: Decimal = Field(description="Saldo capital en mora")
     days_overdue_at_cutoff: int = Field(description="Días de mora al corte")
     overdue_installments: int = Field(description="Cuotas en mora")
     pending_installments: int = Field(description="Cuotas pendientes")

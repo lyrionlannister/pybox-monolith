@@ -335,10 +335,8 @@ class WhatsAppChatService:
                             credit_number=c.credit_number,
                             credit_type=c.credit_type,
                             disbursed_date=c.disbursed_date,
-                            total_credit_balance=float(c.total_credit_balance),
-                            overdue_principal_balance=float(
-                                c.overdue_principal_balance
-                            ),
+                            total_credit_balance=c.total_credit_balance,
+                            overdue_principal_balance=c.overdue_principal_balance,
                             days_overdue_at_cutoff=c.days_overdue_at_cutoff,
                             overdue_installments=c.overdue_installments,
                             pending_installments=c.pending_installments,

@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date, datetime, timezone
+from decimal import Decimal
 from typing import NamedTuple, Sequence
 
 from sqlalchemy import case, cast, func, or_, select, union, update
@@ -23,7 +24,7 @@ class PortfolioCreditStats(NamedTuple):
     codeudores: int
     clientes_unicos: int
     documentos_unicos: int
-    total_mora: float
+    total_mora: Decimal
 
 
 class CreditRepository(SoftDeleteRepositoryBase[CreditModel]):
@@ -81,7 +82,7 @@ class CreditRepository(SoftDeleteRepositoryBase[CreditModel]):
             codeudores=row.codeudores,
             clientes_unicos=clientes_unicos,
             documentos_unicos=documentos_unicos,
-            total_mora=float(row.total_mora),
+            total_mora=row.total_mora,
         )
 
     async def _count_unique_documents(self, debtor_ids_subq) -> int:
@@ -153,7 +154,7 @@ class CreditRepository(SoftDeleteRepositoryBase[CreditModel]):
             codeudores=row.codeudores,
             clientes_unicos=clientes_unicos,
             documentos_unicos=documentos_unicos,
-            total_mora=float(row.total_mora),
+            total_mora=row.total_mora,
         )
 
     async def get_by_credit_number(

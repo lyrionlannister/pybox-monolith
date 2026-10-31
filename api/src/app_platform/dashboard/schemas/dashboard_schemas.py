@@ -1,6 +1,7 @@
 """Schemas de respuesta del dashboard de organización."""
 
 import uuid
+from decimal import Decimal
 
 from pydantic import Field
 
@@ -18,7 +19,7 @@ class OrganizationStatsResponse(BaseSchema):
     unique_debtors_count: int = Field(
         description="Total de clientes únicos (titulares + co-deudores sin duplicados)"
     )
-    total_overdue_amount: float = Field(
+    total_overdue_amount: Decimal = Field(
         description=(
             "Suma del saldo capital en mora en todos los portafolios de la organización"
         )
