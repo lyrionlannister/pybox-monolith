@@ -32,6 +32,8 @@ class PaymentGatewayResolver:
             if credentials is None:
                 return _unsupported
             return MercadoPagoGateway(credentials)
-        if country in _UNSUPPORTED_COUNTRIES:
-            return _unsupported
-        return _bold
+        # País no contemplado en ninguna de las listas de arriba (ej. se agregó a
+        # `Nationality` sin actualizar este resolver): falla explícito en vez de
+        # caer a Bold (exclusiva de Colombia) por defecto, que cobraría en la
+        # cuenta/moneda equivocada.
+        return _unsupported
