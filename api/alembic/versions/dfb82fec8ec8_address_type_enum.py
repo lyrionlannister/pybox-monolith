@@ -19,9 +19,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    sa.Enum("PRIMARY", "SECONDARY", name="tipo_direccion_deudor").create(
-        op.get_bind()
-    )
+    sa.Enum("PRIMARY", "SECONDARY", name="tipo_direccion_deudor").create(op.get_bind())
     op.alter_column(
         "direcciones",
         "tipo_direccion",
