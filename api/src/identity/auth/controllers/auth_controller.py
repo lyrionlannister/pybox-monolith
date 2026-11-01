@@ -29,8 +29,8 @@ from identity.users.enums.user_enums import UserRole, UserScope
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
-# Ninguno de estos endpoints tenía límite de intentos: un código OTP de 6 dígitos o un
-# password se pueden probar por fuerza bruta sin fricción. Límite por IP vía Redis.
+# Límite por IP: un código OTP de 6 dígitos o un password son vulnerables a fuerza
+# bruta sin fricción.
 _auth_rate_limit = Depends(rate_limit("auth", max_attempts=20, window_seconds=60))
 _forgot_password_rate_limit = Depends(
     rate_limit("forgot-password", max_attempts=8, window_seconds=300)
@@ -172,14 +172,13 @@ async def force_logout(
     service: AuthServiceDep,
     user_service: UserServiceDep,
 ) -> dict:
+    """Cierra la sesión de otro usuario; exige el mismo permiso que gestionarlo, para
+    que un admin de una organización no pueda desconectar usuarios de otra."""
     if session.user_id == user_id:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             "Usa /auth/logout para cerrar tu propia sesión.",
         )
-    # Mismo criterio que gestionar (editar/eliminar) al usuario: admin/ORG_USERS de una
-    # organización a la que user_id pertenezca, o global. Evita que un admin de la Org A
-    # pueda desconectar a un usuario de la Org B con la que no tiene relación.
     await user_service.assert_can_manage_user(session, user_id)
     await service.logout(user_id)
     return {"message": "Sesión cerrada."}

@@ -5,7 +5,7 @@ interface State {
   hasError: boolean;
 }
 
-// Clase obligatoria: React (incluyendo v19) no expone hook equivalente a getDerivedStateFromError
+/** Clase obligatoria: React (incluyendo v19) no expone hook equivalente a getDerivedStateFromError. */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
   constructor(props: ErrorBoundaryProps) {
     super(props);

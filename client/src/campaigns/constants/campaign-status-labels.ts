@@ -11,8 +11,7 @@ export const CAMPAIGN_STATUS_LABELS: Record<CampaignStatus, string> = {
   "CANCELADA": "Cancelada",
 };
 
-// Colores semánticos de <Badge> (ui/components/badge.tsx) -- Fase 9 de la auditoría:
-// antes eran clases Tailwind armadas a mano, fuera del sistema de badges compartido.
+/** Colores semánticos de `<Badge>` (ui/components/badge.tsx), no clases Tailwind manuales. */
 export const CAMPAIGN_STATUS_COLORS: Record<CampaignStatus, BadgeColor> = {
   "BORRADOR": "light",
   "PROGRAMADA": "primary",

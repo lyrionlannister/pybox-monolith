@@ -49,19 +49,16 @@ export const BulkSendPage: React.FC = () => {
 
   const compatibleTemplates = allTemplates.filter((t) => t.channel === channelName);
 
-  // Reset template when channel changes and it's no longer compatible
   useEffect(() => {
     if (templateId && !compatibleTemplates.some((t) => t.id === templateId)) {
       setTemplateId("");
     }
   }, [channelId]);
 
-  // Force template mode for WhatsApp
   useEffect(() => {
     if (isWhatsApp) setUseTemplate(true);
   }, [isWhatsApp]);
 
-  // Prefill subject from template if email
   useEffect(() => {
     if (!templateId) return;
     const tpl = allTemplates.find((t) => t.id === templateId);

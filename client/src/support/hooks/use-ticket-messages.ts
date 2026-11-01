@@ -31,7 +31,7 @@ export const useTicketMessages = (ticketNumber: number | undefined) => {
           refetch();
         }
       } catch {
-        // ignore
+        // Notificación malformada: se descarta sin romper el stream.
       }
     });
     es.onerror = () => {};

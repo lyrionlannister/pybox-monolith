@@ -21,9 +21,8 @@ class Periodicity(StrEnum):
     MONTHLY = "MENSUAL"
 
 
-# Sin uso detectado en el resto del backend (repository/service/controller) al momento
-# de esta normalización -- se deja el valor consistente por si se retoma, no se borra
-# la clase sin confirmar con el equipo.
+# Sin uso detectado en el resto del backend (repository/service/controller); se
+# conserva por si se retoma, no borrar sin confirmar con el equipo.
 class DeliveryStatus(StrEnum):
     PENDING = "PENDIENTE"  # En cola, no enviado aún
     QUEUED = "EN_COLA"  # Enviado a Sent, esperando respuesta

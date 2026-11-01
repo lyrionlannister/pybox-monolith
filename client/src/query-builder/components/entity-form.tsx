@@ -45,7 +45,6 @@ export const EntityForm: React.FC<EntityFormProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -62,7 +61,6 @@ export const EntityForm: React.FC<EntityFormProps> = ({
 
       <StepIndicator current={step} total={config.steps.length} />
 
-      {/* Step content */}
       <div>
         {step === 0 && <StepBasicInfo state={state} update={update} config={config} />}
         {step === 1 && (
@@ -88,7 +86,6 @@ export const EntityForm: React.FC<EntityFormProps> = ({
         {step === 4 && <StepSummary state={state} config={config} />}
       </div>
 
-      {/* Actions */}
       <div className="flex items-center justify-between gap-3 border-t border-gray-100 pt-4 dark:border-gray-800">
         {step > 0 ? (
           <button

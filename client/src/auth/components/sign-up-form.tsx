@@ -116,7 +116,6 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
           </p>
         </div>
 
-        {/* Mode toggle */}
         <div className="flex gap-1 p-1.5 mb-4 bg-gray-100 rounded-lg dark:bg-gray-800">
           {(["user", "admin"] as const).map((m) => (
             <button
@@ -192,7 +191,6 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
               autoComplete="new-password"
             />
 
-            {/* Nacionalidad */}
             <div>
               <Label className="text-gray-500">
                 Nacionalidad <span className="text-error-500">*</span>
@@ -214,7 +212,6 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
               />
             </div>
 
-            {/* Teléfono */}
             <div>
               <Label className="text-gray-500">
                 Teléfono <span className="text-error-500">*</span>

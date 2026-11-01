@@ -163,10 +163,10 @@ class BatchSender:
         error: str | None,
         sent_at: datetime | None,
     ) -> None:
-        """Un solo INSERT multi-fila para todo el chunk (Fase 5 de la
-        auditoría), vía `ContactRepository.add_many_isolated`, en vez de
-        un `add_isolated` -- 1 INSERT con su propio SAVEPOINT -- por
-        destinatario. El proveedor ya respondió con un resultado único
+        """Un solo INSERT multi-fila para todo el chunk, vía
+        `ContactRepository.add_many_isolated`, en vez de un `add_isolated`
+        -- 1 INSERT con su propio SAVEPOINT -- por destinatario. El
+        proveedor ya respondió con un resultado único
         para todo el chunk antes de llegar acá, así que no hay nada que
         justifique un round trip por fila en el caso feliz. Si el bulk
         falla por algo no previsto (p. ej. un dato demasiado largo en una
@@ -350,7 +350,7 @@ class BatchSender:
         channel_context: dict[str, Any] | None,
         bulk_id: str,
     ) -> None:
-        """Registra el bulk despachado a Helena en `ejecuciones_ivr` (fase 7).
+        """Registra el bulk despachado a Helena en `ejecuciones_ivr`.
 
         Se crea aquí, no en el provider: el provider es HTTP puro y se
         construye una sola vez a nivel de proceso (`_DISPATCHER` es un

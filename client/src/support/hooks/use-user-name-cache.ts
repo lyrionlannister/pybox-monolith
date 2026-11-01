@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useApiClient } from "@/hooks/use-api-client";
 import type { UserDetail } from "@/types/users/user-types";
 
-// Resuelve y cachea nombres de usuario a partir de los ids vistos en `messages`,
-// evitando refetch repetido del mismo usuario.
+/**
+ * Resuelve y cachea nombres de usuario a partir de los ids vistos en `messages`,
+ * evitando refetch repetido del mismo usuario.
+ */
 export const useUserNameCache = <T extends { senderId: string }>(
   messages: T[],
   currentUserId: string | undefined,

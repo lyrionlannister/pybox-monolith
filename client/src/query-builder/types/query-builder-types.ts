@@ -78,10 +78,11 @@ export interface FieldInfo {
   enumValues: string[] | null;
 }
 
-// API types — el campo con la configuración de la query (tables/joins/agregación) se
-// llama distinto en cada endpoint (filterCriteria en /segments/, reportConfig en
-// /reports/); use-entity-list.ts normaliza ambos a `config` al leer la respuesta.
-
+/**
+ * El campo con la configuración de la query (tables/joins/agregación) se llama
+ * distinto en cada endpoint (filterCriteria en /segments/, reportConfig en
+ * /reports/); use-entity-list.ts normaliza ambos a `config` al leer la respuesta.
+ */
 export interface EntityResponse {
   id: string;
   name: string;

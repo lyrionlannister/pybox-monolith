@@ -487,10 +487,10 @@ class AutomationService:
                 )
             )
 
-            # Teléfonos sin caso previo (Fase 6 de la auditoría): se crean TODOS de una
-            # vez en vez de un ensure_case (SELECT+INSERT) por destinatario dentro del
-            # loop de abajo. "Primer deudor que trae el teléfono" decide el debtor_id
-            # del caso, igual que el orden en que el loop los habría ido creando.
+            # Teléfonos sin caso previo: se crean TODOS de una vez en vez de un
+            # ensure_case (SELECT+INSERT) por destinatario dentro del loop de abajo.
+            # "Primer deudor que trae el teléfono" decide el debtor_id del caso,
+            # igual que el orden en que el loop los habría ido creando.
             missing_phone_to_debtor_id: dict[str, uuid.UUID | None] = {}
             for debtor_id in debtor_ids:
                 for recipient in contact_values.get(debtor_id, []):
@@ -674,8 +674,8 @@ class AutomationService:
     ) -> dict[uuid.UUID, dict[str, Any]]:
         if whatsapp_data is None or whatsapp_data.meta_template_id is None:
             return {}
-        # Sin caché local del body (a propósito, ver plan): se consulta la plantilla
-        # aprobada en vivo para saber qué variables nombradas necesita este envío.
+        # Sin caché local del body: se consulta la plantilla aprobada en vivo para
+        # saber qué variables nombradas necesita este envío.
         template = await self._whatsapp_client.get_template(
             whatsapp_data.meta_template_id
         )

@@ -76,7 +76,7 @@ export type IvrRedial = {
 };
 
 /**
- * Ritmo de marcación del bulk (fase 7). A diferencia de `defaults`/`redial`,
+ * Ritmo de marcación del bulk. A diferencia de `defaults`/`redial`,
  * no hay compilación: estos valores viajan tal cual al `callsPerSecond` /
  * `maxConcurrent` / `defaultCallerId` del bulk. `null` en cualquiera de los
  * dos primeros deja que Helena use su propio default de sistema.

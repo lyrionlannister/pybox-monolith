@@ -18,9 +18,11 @@ export interface StepAggregationCopy {
   havingExampleMetric: string;
 }
 
-// El wizard de agregación nunca escribe mainTable/additionalTables (eso lo maneja
-// el paso de tablas); se omiten del patch para que el callback sea asignable a
-// EntityFormState (query-builder/), cuyo additionalTables lleva más campos.
+/**
+ * El wizard de agregación nunca escribe mainTable/additionalTables (eso lo maneja
+ * el paso de tablas); se omiten del patch para que el callback sea asignable a
+ * EntityFormState (query-builder/), cuyo additionalTables lleva más campos.
+ */
 export type AggregationStepPatch = Partial<Omit<AggregationStepState, "mainTable" | "additionalTables">>;
 
 export interface SharedStepAggregationProps {

@@ -33,8 +33,8 @@ const checkFileAvailability = async (url: string): Promise<boolean> => {
 };
 
 /** Verifica que un archivo (extracto, comprobante, etc.) sea alcanzable antes de
- * intentar mostrarlo en un iframe -- separado en un hook (Fase 8 de la auditoría)
- * para que la lógica de red sea testeable y reusable fuera de `FileViewerPage`. */
+ * intentar mostrarlo en un iframe -- separado en un hook para que la lógica de
+ * red sea testeable y reusable fuera de `FileViewerPage`. */
 export const useFileAvailability = (url: string) => {
   const [fileStatus, setFileStatus] = useState<FileStatus>(url ? "checking" : "unavailable");
 

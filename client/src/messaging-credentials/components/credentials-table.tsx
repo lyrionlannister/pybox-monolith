@@ -24,7 +24,6 @@ const SecretChips: React.FC<{ secretKeys: string[] }> = ({ secretKeys }) =>
 
 export const CredentialsTable: React.FC<CredentialsTableProps> = ({ items, loading, countryLabel, onEdit, onDelete }) => (
   <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3">
-    {/* Desktop table */}
     <div className="hidden overflow-x-auto custom-scrollbar sm:block">
       <Table>
         <TableHeader>
@@ -81,7 +80,6 @@ export const CredentialsTable: React.FC<CredentialsTableProps> = ({ items, loadi
       </Table>
     </div>
 
-    {/* Mobile cards */}
     <div className="flex flex-1 min-h-0 flex-col gap-3 overflow-y-auto p-4 sm:hidden">
       {loading ? (
         <div className="py-10"><Loader size="sm" /></div>

@@ -16,14 +16,12 @@ export const StepSummary: React.FC<StepSummaryProps> = ({ state, config }) => {
 
   return (
     <div className="space-y-5">
-      {/* Basic info */}
       <Section title="Información básica">
         <Row label="Nombre" value={state.name} />
         {state.description && <Row label="Descripción" value={state.description} />}
         <Row label="Tabla principal" value={tableLabel(state.mainTable)} />
       </Section>
 
-      {/* Tables */}
       <Section title="Tablas">
         {allTables.map((t) => (
           <div key={t.alias} className="mb-3">
@@ -55,7 +53,6 @@ export const StepSummary: React.FC<StepSummaryProps> = ({ state, config }) => {
         ))}
       </Section>
 
-      {/* Joins */}
       {state.joins.length > 0 && (
         <Section title="Uniones">
           {state.joins.map((j, i) => (
@@ -66,7 +63,6 @@ export const StepSummary: React.FC<StepSummaryProps> = ({ state, config }) => {
         </Section>
       )}
 
-      {/* Aggregation */}
       {state.aggregateMode && (
         <Section title="Agregación">
           {state.groupBy.length > 0 && (

@@ -46,7 +46,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   return (
     <div className="flex flex-col w-[calc(100vw-3rem)] sm:w-72 h-105 rounded-t-xl bg-white dark:bg-gray-dark shadow-xl border border-gray-200 dark:border-gray-800">
-      {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-800 rounded-t-xl">
         <div className="relative shrink-0">
           {resolveProfilePhotoUrl(win.peerAvatar) ? (
@@ -84,7 +83,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         </button>
       </div>
 
-      {/* Messages */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
@@ -122,7 +120,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
       <div className="flex items-end gap-2 px-3 py-2 border-t border-gray-200 dark:border-gray-800">
         <textarea
           value={input}

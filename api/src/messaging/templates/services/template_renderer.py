@@ -7,10 +7,9 @@ _VAR_PATTERN = re.compile(r"\{(\w+)\}")
 
 
 class TemplateRenderer:
-    """
-    Renders templates using NRS360-compatible single-brace syntax: {variable_name}.
-    Used exclusively for the /preview endpoint (local substitution for testing).
-    The /send endpoint delegates substitution to NRS360 via the sub parameter.
+    """Sustituye variables `{nombre}` localmente, solo para la previsualización.
+
+    El envío real delega la sustitución a 360NRS vía el parámetro `sub`.
     """
 
     def __new__(cls) -> "TemplateRenderer":

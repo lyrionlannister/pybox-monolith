@@ -102,7 +102,6 @@ export const StepDetails: React.FC<StepDetailsProps> = ({
         />
       </div>
 
-      {/* File attachments */}
       <div>
         <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
           Adjuntos{" "}

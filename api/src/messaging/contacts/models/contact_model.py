@@ -63,7 +63,6 @@ class ContactModel(BaseModel):
         name="enviado_en",
     )
 
-    # Nuevo
     provider: Mapped[ProviderType | None] = mapped_column(
         Enum(
             ProviderType,
@@ -74,8 +73,7 @@ class ContactModel(BaseModel):
         name="proveedor",
     )
 
-    # Antes provider_id. Id individual del mensaje en 360NRS (result[].id),
-    # usado para matchear el webhook.
+    # Id individual del mensaje en 360NRS (result[].id), usado para matchear el webhook.
     external_id: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,

@@ -125,11 +125,9 @@ export const mapTicketToKanban = (ticket: SupportTicket): TicketKanban => {
   };
 };
 
-// Colores semánticos de <Badge> -- Fase 9 de la auditoría: antes cada función
-// devolvía sus propias clases Tailwind armadas a mano (y `getColumnCountStyles`/
-// `getStatusBadgeStyles` eran literalmente idénticas: la cuenta de una columna del
-// kanban ES el mismo estado que el badge de un ticket individual, solo que se
-// muestra en otro lugar de la UI).
+// La cuenta de una columna del kanban es el mismo estado que el badge de un
+// ticket individual, solo que se muestra en otro lugar de la UI -- de ahí que
+// compartan el mismo mapeo de colores.
 const CATEGORY_BADGE_COLOR: Record<string, BadgeColor> = {
   brand: "primary",
   error: "error",

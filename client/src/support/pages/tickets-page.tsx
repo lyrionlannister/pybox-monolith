@@ -96,7 +96,6 @@ export const TicketsPage: React.FC = () => {
 
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-hidden">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <Breadcrumb pageTitle="Tickets" />
         {canCreate && (
@@ -106,7 +105,6 @@ export const TicketsPage: React.FC = () => {
         )}
       </div>
 
-      {/* Metrics summary */}
       {metrics && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
           <MetricCard label="Total" value={metrics.total} />
@@ -122,7 +120,6 @@ export const TicketsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Search + filters + view toggle */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-48">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -169,7 +166,6 @@ export const TicketsPage: React.FC = () => {
           </button>
         )}
 
-        {/* View mode toggle */}
         <div className="ml-auto flex items-center rounded-lg border border-gray-200 dark:border-gray-700">
           <button
             type="button"
@@ -190,7 +186,6 @@ export const TicketsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Ticket list */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto custom-scrollbar rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3">
         <TicketKanbanHeader
           groups={groups}

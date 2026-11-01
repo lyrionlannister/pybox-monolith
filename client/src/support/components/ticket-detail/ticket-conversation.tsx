@@ -56,7 +56,6 @@ export const TicketConversation: React.FC<TicketConversationProps> = ({
         Conversación
       </p>
 
-      {/* Messages */}
       <div className="flex max-h-80 flex-col gap-3 overflow-y-auto custom-scrollbar rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/3">
         {loading && (
           <Loader size="sm" loaderText="Cargando mensajes..." />
@@ -101,7 +100,6 @@ export const TicketConversation: React.FC<TicketConversationProps> = ({
         <div ref={endRef} />
       </div>
 
-      {/* Input */}
       {!isTerminal && (
         <form onSubmit={handleSubmit} className="mt-3">
           {isStaff && (

@@ -65,9 +65,7 @@ export const ChatBubblesContainer: React.FC = () => {
         );
       })}
 
-      {/* Minimized bubbles + launcher */}
       <div className={`${hasExpandedWindow ? "hidden sm:flex" : "flex"} flex-col items-end gap-2`}>
-        {/* Minimized windows as bubbles */}
         <div className="flex flex-col gap-2">
           {minimizedWindows.map((win) => {
             const chat = chats.find((c) => c.id === win.chatId);
@@ -83,7 +81,6 @@ export const ChatBubblesContainer: React.FC = () => {
           })}
         </div>
 
-        {/* Launcher button */}
         <div className="relative">
           {showPanel && (
             <AvailableUsersPanel

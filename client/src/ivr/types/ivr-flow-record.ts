@@ -15,7 +15,7 @@ export type IvrFlowRecord = {
   variables?: Record<string, string> | null;
   /** Etiquetas de resultado compiladas, indexadas por nombre de nodo en Helena. */
   outcomes?: IvrOutcomeMap | null;
-  /** Ritmo de marcación y caller ID por defecto del flujo (fase 7). */
+  /** Ritmo de marcación y caller ID por defecto del flujo. */
   callsPerSecond?: number | null;
   maxConcurrent?: number | null;
   callerId?: string | null;

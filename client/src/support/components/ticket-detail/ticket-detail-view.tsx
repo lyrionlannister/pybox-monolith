@@ -109,9 +109,7 @@ export const TicketDetailView: React.FC<TicketDetailViewProps> = ({ ticket, onTi
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-      {/* ── Main panel ── */}
       <Card>
-        {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="mb-2 flex items-center gap-2">
@@ -131,7 +129,6 @@ export const TicketDetailView: React.FC<TicketDetailViewProps> = ({ ticket, onTi
           </div>
         </div>
 
-        {/* Notes */}
         <div className="mt-6 rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
             {isResolved ? "Nota de cierre" : "Notas"}
@@ -141,15 +138,12 @@ export const TicketDetailView: React.FC<TicketDetailViewProps> = ({ ticket, onTi
           </p>
         </div>
 
-        {/* Conversation */}
         <TicketConversation ticketNumber={ticket.ticketNumber} status={ticket.status} />
 
-        {/* Closure attachments — only when resolved */}
         {isResolved && !isOrgVerification && (
           <TicketClosureAttachments ticketNumber={ticket.ticketNumber} refreshTrigger={closureKey} />
         )}
 
-        {/* Org verification documents + resolve actions */}
         {isOrgVerification && (
           <TicketOrgDocsViewer
             ticket={ticket}
@@ -243,11 +237,9 @@ export const TicketDetailView: React.FC<TicketDetailViewProps> = ({ ticket, onTi
         <TicketAttachments ticketNumber={ticket.ticketNumber} />
       </Card>
 
-      {/* ── Sidebar ── */}
       <Card>
         <CardTitle>Detalle del ticket</CardTitle>
         <div className="mt-5 flex flex-col gap-3">
-          {/* Creator */}
           <DetailRow label="Creado por">
             {creator ? (
               <div className="flex items-center gap-2.5">
@@ -259,7 +251,6 @@ export const TicketDetailView: React.FC<TicketDetailViewProps> = ({ ticket, onTi
             )}
           </DetailRow>
 
-          {/* Assigned to */}
           <DetailRow label="Asignado a">
             {ticket.assignedTo ? (
               assignee ? (
@@ -275,12 +266,10 @@ export const TicketDetailView: React.FC<TicketDetailViewProps> = ({ ticket, onTi
             )}
           </DetailRow>
 
-          {/* Entity */}
           <DetailRow label="Entidad">
             <span>{ticket.organizationName || ticket.organizationId}</span>
           </DetailRow>
 
-          {/* Dates */}
           <DetailRow label="Creado">
             {formatTicketDetailDate(ticket.createdAt)}
           </DetailRow>
@@ -291,13 +280,11 @@ export const TicketDetailView: React.FC<TicketDetailViewProps> = ({ ticket, onTi
             </span>
           </DetailRow>
 
-          {/* Priority */}
           <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-white/3">
             <p className="mb-1.5 text-xs text-gray-400 dark:text-gray-500">Prioridad</p>
             <Badge color={getPriorityBadgeColor(ticket.priority)}>{TICKET_PRIORITY_LABELS[ticket.priority]}</Badge>
           </div>
 
-          {/* Type badge */}
           <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-white/3">
             <p className="mb-1.5 text-xs text-gray-400 dark:text-gray-500">Tipo</p>
             <span

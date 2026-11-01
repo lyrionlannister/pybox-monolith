@@ -47,7 +47,6 @@ export const AvailableUsersPanel: React.FC<AvailableUsersPanelProps> = ({
       data-chat-panel
       className="absolute bottom-16 right-0 w-72 bg-white dark:bg-gray-dark border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl z-50 flex flex-col overflow-hidden"
     >
-      {/* Conversations */}
       {sortedChats.length > 0 && (
         <>
           <div className="px-3 pt-3 pb-1">
@@ -82,7 +81,6 @@ export const AvailableUsersPanel: React.FC<AvailableUsersPanelProps> = ({
         </>
       )}
 
-      {/* New conversation */}
       <div className="px-3 pt-2 pb-1">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
           Nueva conversación

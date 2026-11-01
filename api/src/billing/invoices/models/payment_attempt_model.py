@@ -28,7 +28,6 @@ class InvoicePaymentAttemptModel(BaseModel):
         Integer, nullable=False, default=1, name="numero_intento"
     )
 
-    # Pasarela de pago que origino el intento.
     provider: Mapped[PaymentProvider] = mapped_column(
         ENUM(
             PaymentProvider,

@@ -74,7 +74,6 @@ export const StepTablesFilters: React.FC<StepTablesFiltersProps> = ({
       )}
 
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
-        {/* Main table */}
         <TableSection
           title={`${state.mainTable} (tabla principal)`}
           tableName={state.mainTable}
@@ -85,7 +84,6 @@ export const StepTablesFilters: React.FC<StepTablesFiltersProps> = ({
           removable={false}
         />
 
-        {/* Additional tables */}
         {state.additionalTables.map((t) => (
           <TableSection
             key={t.alias}
@@ -163,7 +161,6 @@ const TableSection: React.FC<TableSectionProps> = ({
             <div className="py-4"><Loader /></div>
           ) : (
             <>
-              {/* Column selector */}
               <div>
                 <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Columnas a incluir
@@ -190,7 +187,6 @@ const TableSection: React.FC<TableSectionProps> = ({
                 </div>
               </div>
 
-              {/* Filters */}
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">

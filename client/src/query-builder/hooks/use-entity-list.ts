@@ -12,9 +12,11 @@ interface RawEntityResponse {
   [key: string]: unknown;
 }
 
-// Compartido por segments y reports: ambos exponen el mismo contrato de listado,
-// solo cambia el segmento de URL (kind) y el nombre del campo con la config de la
-// query dentro de cada item (configKey: filterCriteria | reportConfig).
+/**
+ * Compartido por segments y reports: ambos exponen el mismo contrato de listado,
+ * solo cambia el segmento de URL (kind) y el nombre del campo con la config de la
+ * query dentro de cada item (configKey: filterCriteria | reportConfig).
+ */
 export const useEntityList = (
   kind: "segments" | "reports",
   configKey: "filterCriteria" | "reportConfig",
