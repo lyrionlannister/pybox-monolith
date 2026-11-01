@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, SmallInteger, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, SmallInteger, func
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -16,6 +16,10 @@ class ChatMemberModel(AuditModel):
         # `user_id` es la columna no-líder de la PK compuesta: sin este índice,
         # "listar mis chats" (filtra por user_id) no tiene índice usable.
         Index("ix_chat_members_user_id", "user_id"),
+        # `rol` es un IntEnum (MemberRole) sin tipo nativo de Postgres -- mismo
+        # criterio que `ChatModel.type`: CHECK en vez de ENUM nativo, para no
+        # cambiar el wire contract de la API (ya expone el entero tal cual).
+        CheckConstraint("rol IN (0, 1, 2)", name="ck_chat_members_rol_valido"),
     )
 
     chat_id: Mapped[uuid.UUID] = mapped_column(

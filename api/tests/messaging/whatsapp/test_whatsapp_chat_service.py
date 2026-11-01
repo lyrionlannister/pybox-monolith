@@ -35,6 +35,7 @@ def build_service(**overrides) -> tuple[WhatsAppChatService, dict]:
         campaign_repo=MagicMock(),
         user_repo=MagicMock(),
         org_repo=MagicMock(),
+        membership_repo=MagicMock(),
     )
     mocks.update(overrides)
     mocks["portfolio_repo"].session = MagicMock()
@@ -275,6 +276,9 @@ class TestAssign:
         service, mocks = build_service()
         mocks["chat_repo"].get_by_id = AsyncMock(return_value=chat)
         mocks["chat_repo"].update = AsyncMock(side_effect=lambda c: c)
+        mocks["membership_repo"].get_by_user_id = AsyncMock(
+            return_value=[MagicMock(organization_id=organization_id)]
+        )
         session = make_user_session(role=UserRole.ADMIN, scope=UserScope.GLOBAL)
 
         result = await service.assign(chat.id, organization_id, new_agent_id, session)
@@ -290,6 +294,25 @@ class TestAssign:
         with pytest.raises(HTTPException) as exc_info:
             await service.assign(uuid.uuid4(), uuid.uuid4(), uuid.uuid4(), session)
         assert exc_info.value.status_code == 404
+
+    async def test_assign_rejects_user_outside_organization(self):
+        organization_id = uuid.uuid4()
+        other_org_id = uuid.uuid4()
+        new_agent_id = uuid.uuid4()
+        chat = WhatsAppChatModel(
+            id=uuid.uuid4(), organization_id=organization_id, phone="573000000000"
+        )
+        service, mocks = build_service()
+        mocks["chat_repo"].get_by_id = AsyncMock(return_value=chat)
+        mocks["membership_repo"].get_by_user_id = AsyncMock(
+            return_value=[MagicMock(organization_id=other_org_id)]
+        )
+        session = make_user_session(role=UserRole.ADMIN, scope=UserScope.GLOBAL)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await service.assign(chat.id, organization_id, new_agent_id, session)
+        assert exc_info.value.status_code == 422
+        mocks["chat_repo"].update.assert_not_called()
 
     async def test_assign_requires_org_admin(self):
         organization_id = uuid.uuid4()

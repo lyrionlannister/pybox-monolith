@@ -96,6 +96,27 @@ class TestListByChat:
 
         assert [m.id for m in result] == [first.id, second.id]
 
+    async def test_caps_to_most_recent_messages_still_ascending(
+        self, db_session, real_org
+    ):
+        """Hilo con más mensajes que el límite: se queda con los más recientes, pero
+        la respuesta sigue en orden ascendente (más viejo primero) para mostrar."""
+        chat = build_chat(real_org.id)
+        db_session.add(chat)
+        await db_session.flush()
+        now = datetime.now(timezone.utc)
+        messages = [
+            build_message(chat.id, sent_at=now - timedelta(minutes=10 - i))
+            for i in range(5)
+        ]
+        db_session.add_all(messages)
+        await db_session.flush()
+        repo = WhatsAppMessageRepository(db_session)
+
+        result = await repo.list_by_chat(chat.id, limit=3)
+
+        assert [m.id for m in result] == [m.id for m in messages[-3:]]
+
     async def test_only_returns_messages_of_requested_chat(self, db_session, real_org):
         chat_a = build_chat(real_org.id)
         chat_b = build_chat(real_org.id)

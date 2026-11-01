@@ -79,10 +79,24 @@ class TestListTableFields:
         assert resp.status_code == 200
         assert any(f["name"] == "codigo" for f in resp.json())
 
-    async def test_valid_as_org_scoped_user(self, auth_as, make_user_session_factory):
+    async def test_valid_as_org_scoped_user_on_catalog_table(
+        self, auth_as, make_user_session_factory
+    ):
+        """Org-scoped solo puede inspeccionar tablas de TENANT_SCOPED_TABLES (las
+        que reports/segments pueden consultar), no cualquier tabla de la base."""
+        authed = auth_as(org_scoped_session(make_user_session_factory))
+        resp = await authed.get(f"{BASE}/schemas/public/tables/creditos/fields")
+        assert resp.status_code == 200
+        assert any(f["name"] == "id" for f in resp.json())
+
+    async def test_org_scoped_user_outside_catalog_returns_404(
+        self, auth_as, make_user_session_factory
+    ):
+        """`paises` no está en TENANT_SCOPED_TABLES: aunque exista, un org-scoped no
+        puede usar este endpoint para inspeccionar esquema fuera del catálogo."""
         authed = auth_as(org_scoped_session(make_user_session_factory))
         resp = await authed.get(f"{BASE}/schemas/public/tables/paises/fields")
-        assert resp.status_code == 200
+        assert resp.status_code == 404
 
     async def test_without_org_or_global_returns_403(
         self, auth_as, make_user_session_factory

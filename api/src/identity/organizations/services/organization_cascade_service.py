@@ -50,14 +50,18 @@ from receivables.reports.repository.report_execution_repository import (
     ReportExecutionRepository,
 )
 from receivables.reports.repository.report_repository import ReportRepository
+from receivables.segments.repository.segment_execution_repository import (
+    SegmentExecutionRepository,
+)
+from receivables.segments.repository.segment_repository import SegmentRepository
 from receivables.statements.repository.statement_repository import StatementRepository
 
 
 class OrganizationCascadeService:
     """Baja lógica (y su reversa) de los datos de una organización que no son
     membresías, roles ni portafolios: deudores y lo que cuelga de ellos, chats y
-    credenciales de WhatsApp, IVR, resultados de campañas, reportes, documentos y
-    accesos a portafolios.
+    credenciales de WhatsApp, IVR, resultados de campañas, reportes, segmentos,
+    documentos y accesos a portafolios.
 
     Todo lleva el mismo `deleted_at` que la organización, así `restore` revierte
     solo lo que cayó con ella y no resucita filas eliminadas antes por otra vía.
@@ -84,6 +88,8 @@ class OrganizationCascadeService:
         self._campaign_result_repo = CampaignResultRepository(session)
         self._report_repo = ReportRepository(session)
         self._report_execution_repo = ReportExecutionRepository(session)
+        self._segment_repo = SegmentRepository(session)
+        self._segment_execution_repo = SegmentExecutionRepository(session)
         self._document_repo = DocumentRepository(session)
         self._portfolio_document_repo = PortfolioDocumentRepository(session)
         self._portfolio_user_access_repo = PortfolioUserAccessRepository(session)
@@ -119,6 +125,8 @@ class OrganizationCascadeService:
             self._campaign_result_repo,
             self._report_repo,
             self._report_execution_repo,
+            self._segment_repo,
+            self._segment_execution_repo,
             self._document_repo,
             self._portfolio_document_repo,
             self._portfolio_user_access_repo,

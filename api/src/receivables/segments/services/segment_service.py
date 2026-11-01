@@ -215,10 +215,10 @@ class SegmentService:
 
         df = self._to_dataframe(result)
         file_name: str | None = None
-        file_path: str | None = None
+        document_id: uuid.UUID | None = None
 
         if request.mode == "audit":
-            file_name, file_path = await self._save_audit_file(
+            file_name, document_id = await self._save_audit_file(
                 portfolio_id=portfolio_id,
                 segment_name=segment.name,
                 df=df,
@@ -228,7 +228,7 @@ class SegmentService:
                 segment_id=segment_id,
                 mode=request.mode,
                 file_name=file_name,
-                file_path=file_path,
+                document_id=document_id,
                 rows=len(df),
                 columns=df.columns,
                 executed_by=user_id,
@@ -242,7 +242,7 @@ class SegmentService:
             "data": df.to_dicts(),
             "mode": request.mode,
             "file_name": file_name,
-            "file_path": file_path,
+            "document_id": document_id,
         }
 
     async def list_executions(
@@ -263,10 +263,12 @@ class SegmentService:
         segment_name: str,
         df: pl.DataFrame,
         user_id: uuid.UUID,
-    ) -> tuple[str, str]:
+    ) -> tuple[str, uuid.UUID]:
         """Guarda el CSV de auditoria en el almacen de objetos.
 
-        Devuelve (nombre, id del documento). Cuelga del portafolio via
+        Devuelve (nombre, id del documento). El id se persiste en
+        `ejecuciones_segmentos.id_documento`, una FK real contra `documentos` (mismo
+        patrón que `ReportService._save_audit_file`). Cuelga del portafolio via
         `documentos_portafolio`, y la entidad dueña se denormaliza ahi desde el mismo
         portafolio para poder aislar por organizacion al descargarlo.
         """
@@ -294,4 +296,4 @@ class SegmentService:
                 document_id=document.id,
             )
         )
-        return file_name, str(document.id)
+        return file_name, document.id

@@ -263,7 +263,9 @@ class DmlService:
                 "Se requieren uniones (joins) cuando hay más de una tabla."
             )
 
-        alias_map = build_table_alias_map(tables)
+        # Valida que los alias sean únicos (soporta self-join); no hace falta
+        # indexar en el dict acá, cada tabla ya trae su propio alias/nombre.
+        build_table_alias_map(tables)
         decrypt_columns = (
             encrypted_output_columns(tables, prefixed=True)
             if decrypt_sensitive
@@ -272,12 +274,16 @@ class DmlService:
 
         select_parts: list[str] = []
         for table in tables:
-            schema, table_name = sanitize_table_name(table["name"])
-            alias = alias_map[f"{schema}.{table_name}"]
+            _, table_name = sanitize_table_name(table["name"])
+            alias = sanitize_identifier(
+                table.get("alias") or table_name, label="el alias de la tabla"
+            )
             select_parts.extend(build_select_parts(table, alias, prefixed_alias=True))
 
         first_schema, first_table = sanitize_table_name(tables[0]["name"])
-        first_alias = alias_map[f"{first_schema}.{first_table}"]
+        first_alias = sanitize_identifier(
+            tables[0].get("alias") or first_table, label="el alias de la tabla"
+        )
         query = (
             f"SELECT {', '.join(select_parts)} "
             f"FROM {first_schema}.{first_table} AS {first_alias}"
@@ -310,7 +316,9 @@ class DmlService:
         where_parts: list[str] = []
         for table in tables:
             schema, table_name = sanitize_table_name(table["name"])
-            alias = alias_map[f"{schema}.{table_name}"]
+            alias = sanitize_identifier(
+                table.get("alias") or table_name, label="el alias de la tabla"
+            )
             w = build_where_clauses(
                 table.get("filters", []), alias, f"{schema}.{table_name}"
             )
@@ -362,7 +370,9 @@ class DmlService:
         )
 
         first_schema, first_table = sanitize_table_name(tables[0]["name"])
-        first_alias = alias_map[f"{first_schema}.{first_table}"]
+        first_alias = sanitize_identifier(
+            tables[0].get("alias") or first_table, label="el alias de la tabla"
+        )
 
         select_parts = [
             f"{g['sql_expression']} AS {g['output_alias']}"
@@ -403,7 +413,9 @@ class DmlService:
         where_parts2: list[str] = []
         for table in tables:
             schema, table_name = sanitize_table_name(table["name"])
-            alias = alias_map[f"{schema}.{table_name}"]
+            alias = sanitize_identifier(
+                table.get("alias") or table_name, label="el alias de la tabla"
+            )
             w = build_where_clauses(
                 table.get("filters", []), alias, f"{schema}.{table_name}"
             )

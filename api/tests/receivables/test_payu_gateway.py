@@ -217,6 +217,41 @@ class TestCreateTransaction:
         assert payload["transaction"]["cookie"] == "device-session-1"
         assert payload["transaction"]["userAgent"] == "pytest"
 
+    async def test_pse_payment_rounds_amount_to_whole_peso(self, monkeypatch):
+        """PayU factura en pesos enteros: 6_500_075 centavos (65000.75 COP) debe
+        redondearse HALF_UP a 65001 COP, y el `amount_in_cents` de la transacción
+        devuelta debe reflejar ese redondeo (65_001_00), no el crudo sin redondear --
+        si no, `attempt_status_sync` compara mal contra lo que PayU reporta después."""
+        gateway = _make_gateway(monkeypatch)
+        # pylint: disable-next=protected-access
+        gateway._client.submit_transaction.return_value = {
+            "code": "SUCCESS",
+            "transactionResponse": {
+                "state": "PENDING",
+                "extraParameters": {"BANK_URL": "https://bank.test/confirm"},
+            },
+        }
+        pse = _pse_payment_method()
+
+        transaction = await gateway.create_transaction(
+            reference="PAG-1",
+            amount_in_cents=6_500_075,
+            currency="COP",
+            payment_method=pse,
+            acceptance_token="",
+            accept_personal_auth="",
+            customer_email="debtor@example.com",
+            device_info=_device_info(),
+        )
+
+        assert transaction.amount_in_cents == 6_500_100
+
+        # pylint: disable=protected-access
+        payload = gateway._client.submit_transaction.await_args.args[1]
+        # pylint: enable=protected-access
+        tx_value = payload["transaction"]["order"]["additionalValues"]["TX_VALUE"]
+        assert tx_value["value"] == 65_001
+
     async def test_nequi_payment_is_pending_without_redirect(self, monkeypatch):
         gateway = _make_gateway(monkeypatch)
         # pylint: disable-next=protected-access

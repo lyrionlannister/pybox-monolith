@@ -8,8 +8,14 @@ from datetime import datetime, timezone
 from fastapi import HTTPException, Response, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app_platform.documents.enums.document_enums import MAX_DOCUMENT_SIZE_BYTES
 from app_platform.documents.models.document_model import DocumentModel
 from app_platform.documents.services.document_service import DocumentService
+from app_platform.documents.utils.upload_limits import read_within_limit
+from app_platform.notifications.enums.notification_enums import (
+    NotificationCategory,
+    NotificationType,
+)
 from app_platform.notifications.services.notification_service import NotificationService
 from app_platform.support.enums.support_enums import (
     IdentityTopic,
@@ -628,8 +634,8 @@ class SupportService:
             user_id=data.user_id,
             title="Ticket asignado",
             body=f"Se te asignó el ticket de soporte #{ticket.ticket_number}.",
-            category="support",
-            notif_type="info",
+            category=NotificationCategory.SUPPORT,
+            notif_type=NotificationType.INFO,
             link=f"/cs/tickets/{ticket.ticket_number}",
         )
         return SupportTicketSchema.model_validate(updated)
@@ -779,8 +785,8 @@ class SupportService:
                 user_id=uid,
                 title="Nuevo mensaje en ticket",
                 body=f"Mensaje en ticket #{ticket.ticket_number}.",
-                category="support_message",
-                notif_type="info",
+                category=NotificationCategory.SUPPORT_MESSAGE,
+                notif_type=NotificationType.INFO,
                 link=f"/cs/tickets/{ticket.ticket_number}",
                 details={"ticket_number": ticket.ticket_number},
             )
@@ -838,7 +844,6 @@ class SupportService:
             )
 
     _ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".doc", ".pdf"}
-    _MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
     _CONTENT_TYPE_BY_EXT = {
         ".jpg": "image/jpeg",
         ".jpeg": "image/jpeg",
@@ -878,7 +883,7 @@ class SupportService:
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail=f"Tipo de archivo no permitido: {ext}",
                 )
-            content = await self._read_within_limit(upload)
+            content = await read_within_limit(upload, MAX_DOCUMENT_SIZE_BYTES)
             safe_name = self._safe_filename(upload.filename)
             # store_generated() está pensado para artefactos que genera la propia
             # API, no para subidas de usuario — pero acá es seguro: el content-type
@@ -906,27 +911,6 @@ class SupportService:
             )
             result.append(self._to_attachment_schema(ticket, document))
         return result
-
-    async def _read_within_limit(self, upload: UploadFile) -> bytes:
-        """Lee el archivo en chunks y corta apenas se supera el máximo, en vez de
-        bufferear todo el contenido en memoria antes de poder rechazarlo."""
-        if upload.size is not None and upload.size > self._MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail="El archivo excede el tamaño máximo de 10 MB.",
-            )
-        chunks = bytearray()
-        while True:
-            chunk = await upload.read(1024 * 1024)
-            if not chunk:
-                break
-            chunks.extend(chunk)
-            if len(chunks) > self._MAX_FILE_SIZE:
-                raise HTTPException(
-                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                    detail="El archivo excede el tamaño máximo de 10 MB.",
-                )
-        return bytes(chunks)
 
     async def upload_attachments(
         self, ticket_number: int, files: list[UploadFile], f: SupportFilter
@@ -1007,8 +991,8 @@ class SupportService:
             user_id=agent_id,
             title="Nuevo ticket asignado",
             body=f"Se te asignó un ticket de soporte #{ticket.ticket_number}.",
-            category="support",
-            notif_type="info",
+            category=NotificationCategory.SUPPORT,
+            notif_type=NotificationType.INFO,
             link=f"/cs/tickets/{ticket.ticket_number}",
         )
 
@@ -1051,7 +1035,7 @@ class SupportService:
                 user_id=user_id,
                 title=title,
                 body=body,
-                category="org_verification",
+                category=NotificationCategory.ORG_VERIFICATION,
             )
 
     async def _resolve_identity_verification(
@@ -1093,5 +1077,5 @@ class SupportService:
             user_id=user_id,
             title=title,
             body=body,
-            category="identity_verification",
+            category=NotificationCategory.IDENTITY_VERIFICATION,
         )

@@ -18,6 +18,7 @@ from app_platform.documents.utils.document_naming import (
     safe_original_name,
     verify_magic_bytes,
 )
+from app_platform.documents.utils.upload_limits import read_within_limit
 from core.config.logger import logger
 from core.storage.object_storage import ObjectStorage, ObjectStorageError
 from core.storage.s3_object_storage import object_storage
@@ -68,7 +69,7 @@ class DocumentService:
         consulta el `get_by_checksum` de SU propio repository antes de llamar acá. La
         dedup necesita saber de quién es el documento, y eso ya no se sabe en esta capa.
         """
-        content = await file.read()
+        content = await read_within_limit(file, MAX_DOCUMENT_SIZE_BYTES)
         content_type = resolve_content_type(file.filename, file.content_type)
         if content:
             verify_magic_bytes(content, content_type)
@@ -76,12 +77,6 @@ class DocumentService:
         if not content:
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_ENTITY, "El archivo está vacío"
-            )
-        if len(content) > MAX_DOCUMENT_SIZE_BYTES:
-            limit_mb = MAX_DOCUMENT_SIZE_BYTES // (1024 * 1024)
-            raise HTTPException(
-                status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                f"El archivo supera el límite de {limit_mb} MB",
             )
 
         return await self._persist(

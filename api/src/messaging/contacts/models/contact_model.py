@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,6 +14,15 @@ from messaging.contacts.enums.contact_enums import ContactStatus, ProviderType
 
 class ContactModel(BaseModel):
     __tablename__ = "contactos"
+
+    # Filtros de rango de fecha por organización (facturación por periodo,
+    # ContactRepository.get_billing_usage/get_monthly_sends_by_campaign) y
+    # ORDER BY sent_at en listados por deudor -- sin este índice compuesto, el
+    # índice simple de id_organizacion no alcanza sobre una tabla sin tope de
+    # crecimiento (una fila por mensaje enviado).
+    __table_args__ = (
+        Index("ix_contactos_organizacion_enviado_en", "id_organizacion", "enviado_en"),
+    )
 
     content: Mapped[str] = mapped_column(
         Text,

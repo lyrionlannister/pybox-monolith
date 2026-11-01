@@ -205,6 +205,32 @@ class TestUpdateUser:
         resp = await authed.patch(f"{BASE}/{real_user.id}", json={"firstname": "hack"})
         assert resp.status_code == 403
 
+    async def test_email_already_taken_by_another_user_returns_409(
+        self, client, auth_as, make_user_session_factory, real_user
+    ):
+        other_payload = register_payload()
+        resp = await client.post(f"{AUTH_BASE}/register/user", json=other_payload)
+        assert resp.status_code == 201
+
+        authed = auth_as(
+            make_user_session_factory(role=UserRole.ADMIN, scope=UserScope.GLOBAL)
+        )
+        resp = await authed.patch(
+            f"{BASE}/{real_user.id}", json={"email": other_payload["email"]}
+        )
+        assert resp.status_code == 409
+
+    async def test_can_keep_its_own_email_unchanged(
+        self, auth_as, make_user_session_factory, real_user
+    ):
+        authed = auth_as(
+            make_user_session_factory(role=UserRole.ADMIN, scope=UserScope.GLOBAL)
+        )
+        resp = await authed.patch(
+            f"{BASE}/{real_user.id}", json={"email": real_user.email}
+        )
+        assert resp.status_code == 200
+
 
 class TestDeleteUser:
     async def test_delete_valid_as_global_admin(

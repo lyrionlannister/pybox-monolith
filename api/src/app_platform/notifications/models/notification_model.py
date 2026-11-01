@@ -3,10 +3,14 @@
 import uuid
 
 from sqlalchemy import Boolean, ForeignKey, String
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ENUM, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app_platform.notifications.enums.notification_enums import (
+    NotificationCategory,
+    NotificationType,
+)
 from core.base.audit_model import BaseModel
 
 
@@ -22,9 +26,24 @@ class NotificationModel(BaseModel):
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False, name="titulo")
     body: Mapped[str] = mapped_column(String(1000), nullable=False, name="cuerpo")
-    category: Mapped[str] = mapped_column(String(100), nullable=False, name="categoria")
-    notif_type: Mapped[str | None] = mapped_column(
-        String(50), nullable=True, name="tipo", default="info"
+    category: Mapped[NotificationCategory] = mapped_column(
+        ENUM(
+            NotificationCategory,
+            name="categoria_notificacion",
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=False,
+        name="categoria",
+    )
+    notif_type: Mapped[NotificationType | None] = mapped_column(
+        ENUM(
+            NotificationType,
+            name="tipo_notificacion",
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=True,
+        name="tipo",
+        default=NotificationType.INFO,
     )
     is_read: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, name="leida"

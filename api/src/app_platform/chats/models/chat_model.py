@@ -2,7 +2,13 @@
 
 import uuid
 
-from sqlalchemy import ForeignKey, SmallInteger, String, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    ForeignKey,
+    SmallInteger,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -11,7 +17,15 @@ from core.base.audit_model import BaseModel
 
 class ChatModel(BaseModel):
     __tablename__ = "chats"
-    __table_args__ = (UniqueConstraint("clave_dm", name="uq_chats_clave_dm"),)
+    __table_args__ = (
+        UniqueConstraint("clave_dm", name="uq_chats_clave_dm"),
+        # `tipo` es un IntEnum (ChatType) sin tipo nativo de Postgres -- el wire
+        # contract de la API ya expone el entero (0/1) tal cual, así que convertir
+        # la columna a ENUM nativo de string cambiaría ese contrato; un CHECK cierra
+        # la falta de integridad (nada impedía insertar un entero fuera de rango)
+        # sin tocarlo.
+        CheckConstraint("tipo IN (0, 1)", name="ck_chats_tipo_valido"),
+    )
 
     type: Mapped[int] = mapped_column(SmallInteger, nullable=False, name="tipo")
     dm_key: Mapped[str | None] = mapped_column(

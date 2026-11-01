@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import Field
 
@@ -9,6 +10,7 @@ from app_platform.countries.enums.country_enums import UserDocumentType
 from core.base.schema_base import BaseSchema
 from receivables.contact_methods.enums.contact_method_enums import ContactMethodType
 from receivables.credits.enums.credit_enums import CreditTypes
+from receivables.debtors.enums.address_enums import AddressType
 from receivables.debtors.enums.debtor_enums import DebtorType
 
 
@@ -18,7 +20,7 @@ class AddressResponse(BaseSchema):
     city: str = Field(description="Ciudad")
     state: str = Field(description="Departamento o estado")
     country: str = Field(description="País")
-    address_type: str = Field(description="Tipo de dirección (PRIMARY, etc.)")
+    address_type: AddressType = Field(description="Tipo de dirección")
 
 
 class ContactMethodResponse(BaseSchema):
@@ -78,7 +80,9 @@ class CreateAddressRequest(BaseSchema):
     city: str = Field(description="Ciudad")
     state: str = Field(description="Departamento o estado")
     country: str = Field(description="País")
-    address_type: str = Field(default="PRIMARY", description="Tipo de dirección")
+    address_type: AddressType = Field(
+        default=AddressType.PRIMARY, description="Tipo de dirección"
+    )
 
 
 class CreateContactMethodRequest(BaseSchema):
@@ -91,8 +95,8 @@ class DebtorCreditResponse(BaseSchema):
     credit_number: str = Field(description="Número de crédito")
     credit_type: CreditTypes = Field(description="Tipo de crédito")
     disbursed_date: datetime = Field(description="Fecha de desembolso")
-    total_credit_balance: float = Field(description="Saldo total del crédito")
-    overdue_principal_balance: float = Field(description="Saldo capital en mora")
+    total_credit_balance: Decimal = Field(description="Saldo total del crédito")
+    overdue_principal_balance: Decimal = Field(description="Saldo capital en mora")
     days_overdue_at_cutoff: int = Field(description="Días de mora al corte")
     overdue_installments: int = Field(description="Cuotas en mora")
     pending_installments: int = Field(description="Cuotas pendientes")

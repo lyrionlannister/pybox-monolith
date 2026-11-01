@@ -91,6 +91,6 @@ async def test_a_global_admin_replaces_the_logo():
 
     service.replace_logo.assert_awaited_once()
     kwargs = service.replace_logo.await_args.kwargs
-    assert kwargs["file_bytes"] == b"contenido"
+    assert kwargs["file"].filename == "logo.png"
     assert kwargs["uploaded_by"] == session.user_id
     assert response.logo_url == f"/platform/branding/documents/{logo_id}/content"

@@ -4,10 +4,12 @@ MAX_ERRORS = 50
 
 # Feature flag (leída con get_or_default EN CADA LLAMADA, no cacheada a nivel de
 # módulo -- ver portfolio_csv_service.py) para el camino de precarga + bulk upsert de
-# deudores/créditos (Fase 4 de la auditoría). Default "false": el camino nuevo se activa
-# explícitamente por entorno, nunca al desplegar.
+# deudores/créditos (Fase 4 de la auditoría). Default "true": el camino bulk ya está
+# verificado contra el mismo golden que el secuencial
+# (test_bulk_path_matches_sequential_path_result) -- dejarlo detrás de un flag en
+# "false" por defecto reintroducía el N+1 por fila que ya se había resuelto.
 PORTFOLIO_CSV_BULK_UPSERT_ENV_VAR = "PORTFOLIO_CSV_BULK_UPSERT"
-DEFAULT_PORTFOLIO_CSV_BULK_UPSERT = "false"
+DEFAULT_PORTFOLIO_CSV_BULK_UPSERT = "true"
 
 # Filas por chunk del camino bulk: cada chunk se intenta como un solo INSERT ... ON
 # CONFLICT DO UPDATE por entidad (deudores, créditos); si el chunk completo falla por

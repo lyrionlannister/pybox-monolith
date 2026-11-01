@@ -46,7 +46,7 @@ async def upload_audio(
     user_friendly_name: Annotated[str | None, Form(alias="userFriendlyName")] = None,
     slot_number: Annotated[str | None, Form(alias="slotNumber")] = None,
 ) -> dict[str, Any]:
-    require_org_or_global(session)
+    require_global_admin(session)
     buffer = await file.read()
     return await client.upload_sound(
         file_buffer=buffer,

@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config.logger import logger
+from core.database.redis import redis_client
 from core.tools.config_tools import get_or_throw
 from identity.auth.enums.notification_enums import VerificationChannel
 from identity.auth.exceptions import (
@@ -21,6 +22,11 @@ from identity.auth.repository.verification_code_repository import (
 )
 
 EXPIRATION_MINUTES = 5
+# Único defensa contra fuerza bruta propia del código (el rate-limit de IP en el
+# controller es compartido entre los 4 pasos de forgot-password, no por código): tras
+# este número de intentos fallidos con el MISMO código vigente, se invalida como si
+# hubiera expirado, obligando a pedir uno nuevo.
+MAX_FAILED_ATTEMPTS = 5
 
 
 class VerificationService(ABC):
@@ -32,6 +38,26 @@ class VerificationService(ABC):
 
     def _generate_code(self) -> str:
         return str(secrets.randbelow(1_000_000)).zfill(6)
+
+    def _attempts_key(self, user_id: uuid.UUID) -> str:
+        return f"otp-attempts:{self.channel.value}:{user_id}"
+
+    async def _assert_not_locked_out(self, user_id: uuid.UUID) -> None:
+        raw = await redis_client.get(self._attempts_key(user_id))
+        if raw is not None and int(raw) >= MAX_FAILED_ATTEMPTS:
+            logger.warning(
+                "[verification] locked_out | user_id=%s channel=%s",
+                user_id,
+                self.channel.value,
+            )
+            raise CodeExpiredException(
+                "Demasiados intentos fallidos. Solicita un código nuevo."
+            )
+
+    async def _register_failed_attempt(self, user_id: uuid.UUID) -> None:
+        await redis_client.increment(
+            self._attempts_key(user_id), EXPIRATION_MINUTES * 60
+        )
 
     async def send_code(self, user) -> None:
         logger.info(
@@ -86,6 +112,7 @@ class VerificationService(ABC):
             )
 
     async def verify_code(self, user_id: uuid.UUID, code: str) -> None:
+        await self._assert_not_locked_out(user_id)
         try:
             record = await self._repo.verify_with_exceptions(
                 user_id, code, self.channel
@@ -96,6 +123,8 @@ class VerificationService(ABC):
             CodeExpiredException,
             CodeAlreadyUsedException,
         ) as exc:
+            if isinstance(exc, CodeNotFoundException):
+                await self._register_failed_attempt(user_id)
             logger.warning(
                 "[verification] verify_failed | user_id=%s channel=%s error=%s",
                 user_id,
@@ -103,9 +132,11 @@ class VerificationService(ABC):
                 type(exc).__name__,
             )
             raise
+        await redis_client.delete(self._attempts_key(user_id))
 
     async def peek_code(self, user_id: uuid.UUID, code: str) -> None:
         """Valida el código sin consumirlo."""
+        await self._assert_not_locked_out(user_id)
         try:
             await self._repo.verify_with_exceptions(user_id, code, self.channel)
         except (
@@ -113,6 +144,8 @@ class VerificationService(ABC):
             CodeExpiredException,
             CodeAlreadyUsedException,
         ) as exc:
+            if isinstance(exc, CodeNotFoundException):
+                await self._register_failed_attempt(user_id)
             logger.warning(
                 "[verification] peek_failed | user_id=%s channel=%s error=%s",
                 user_id,

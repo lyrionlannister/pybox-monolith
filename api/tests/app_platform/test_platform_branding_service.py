@@ -32,7 +32,7 @@ def _service(branding) -> tuple[PlatformBrandingService, MagicMock, MagicMock]:
     documents = MagicMock()
     documents.get_by_id = AsyncMock()
     documents.to_content_response = AsyncMock()
-    documents.store_generated = AsyncMock(return_value=SimpleNamespace(id=uuid.uuid4()))
+    documents.store = AsyncMock(return_value=SimpleNamespace(id=uuid.uuid4()))
     documents.delete_by_id = AsyncMock()
     return (
         PlatformBrandingService(repo=repo, document_service=documents),
@@ -103,7 +103,8 @@ class TestReplaceLogo:
         branding = _branding(previous_id)
         service, repo, documents = _service(branding)
         new_document = SimpleNamespace(id=uuid.uuid4())
-        documents.store_generated.return_value = new_document
+        documents.store.return_value = new_document
+        file = SimpleNamespace(filename="logo.png")
         order: list[str] = []
 
         async def record_update(instance):
@@ -116,14 +117,13 @@ class TestReplaceLogo:
         repo.update.side_effect = record_update
         documents.delete_by_id.side_effect = record_delete
 
-        result = await service.replace_logo(b"contenido", "logo.png", uploaded_by)
+        result = await service.replace_logo(file, uploaded_by)
 
         assert result.logo_document_id == new_document.id
         assert order == ["update", "delete"]
         documents.delete_by_id.assert_awaited_once_with(previous_id)
-        kwargs = documents.store_generated.await_args.kwargs
-        assert kwargs["content"] == b"contenido"
-        assert kwargs["filename"] == "logo.png"
+        kwargs = documents.store.await_args.kwargs
+        assert kwargs["file"] is file
         assert kwargs["domain"] == PLATFORM_BRANDING_STORAGE_DOMAIN
         assert kwargs["owner_id"] == PLATFORM_BRANDING_OWNER_ID
         assert kwargs["uploaded_by"] == uploaded_by
@@ -131,7 +131,7 @@ class TestReplaceLogo:
     async def test_first_logo_has_nothing_to_delete(self):
         service, _, documents = _service(_branding(None))
 
-        await service.replace_logo(b"contenido", "logo.png", uuid.uuid4())
+        await service.replace_logo(SimpleNamespace(filename="logo.png"), uuid.uuid4())
 
         documents.delete_by_id.assert_not_awaited()
 
@@ -139,12 +139,12 @@ class TestReplaceLogo:
         previous_id = uuid.uuid4()
         branding = _branding(previous_id)
         service, repo, documents = _service(branding)
-        documents.store_generated.side_effect = HTTPException(
-            503, "almacén no disponible"
-        )
+        documents.store.side_effect = HTTPException(503, "almacén no disponible")
 
         with pytest.raises(HTTPException):
-            await service.replace_logo(b"contenido", "logo.png", uuid.uuid4())
+            await service.replace_logo(
+                SimpleNamespace(filename="logo.png"), uuid.uuid4()
+            )
 
         assert branding.logo_document_id == previous_id
         repo.update.assert_not_awaited()

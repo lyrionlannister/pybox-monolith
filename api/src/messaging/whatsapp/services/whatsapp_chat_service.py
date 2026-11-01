@@ -12,6 +12,9 @@ from core.security.policies.security_policies import (
     require_permission,
 )
 from core.security.services.encrypt_service import encrypt_service
+from identity.organizations.repository.organization_membership_repository import (
+    OrganizationMembershipRepository,
+)
 from identity.organizations.repository.organization_repository import (
     OrganizationRepository,
 )
@@ -82,8 +85,10 @@ class WhatsAppChatService:
         campaign_repo: CampaignRepository,
         user_repo: UserRepository,
         org_repo: OrganizationRepository,
+        membership_repo: OrganizationMembershipRepository,
     ) -> None:
         self._org_repo = org_repo
+        self._membership_repo = membership_repo
         self._chat_repo = chat_repo
         self._message_repo = message_repo
         self._portfolio_access_repo = portfolio_access_repo
@@ -214,6 +219,12 @@ class WhatsAppChatService:
         chat = await self._chat_repo.get_by_id(chat_id)
         if chat is None or chat.organization_id != organization_id:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Hilo no encontrado")
+        memberships = await self._membership_repo.get_by_user_id(assigned_user_id)
+        if not any(m.organization_id == organization_id for m in memberships):
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "El usuario asignado no pertenece a esta organización.",
+            )
         chat.assigned_user_id = assigned_user_id
         return await self._chat_repo.update(chat)
 
@@ -324,10 +335,8 @@ class WhatsAppChatService:
                             credit_number=c.credit_number,
                             credit_type=c.credit_type,
                             disbursed_date=c.disbursed_date,
-                            total_credit_balance=float(c.total_credit_balance),
-                            overdue_principal_balance=float(
-                                c.overdue_principal_balance
-                            ),
+                            total_credit_balance=c.total_credit_balance,
+                            overdue_principal_balance=c.overdue_principal_balance,
                             days_overdue_at_cutoff=c.days_overdue_at_cutoff,
                             overdue_installments=c.overdue_installments,
                             pending_installments=c.pending_installments,

@@ -7,6 +7,8 @@ filtros comunes (igualdad, IN, BETWEEN, LIKE/contiene) y que un identificador
 inválido se rechaza antes de llegar a componerse en SQL.
 """
 
+from decimal import Decimal
+
 import pytest
 from cryptography.exceptions import InvalidTag
 
@@ -25,6 +27,7 @@ from app_platform.schema_manager.utils.query_utils import (
     resolve_full_table_name,
     sanitize_identifier,
     sanitize_table_name,
+    serialize_value,
     sql_literal,
 )
 from core.security.services.encrypt_service import encrypt_service
@@ -95,7 +98,7 @@ class TestEncryptedOutputColumns:
         )
 
     def test_group_by_output_alias_of_encrypted_column(self):
-        alias_map = {"public.deudores": "d", "public.creditos": "c"}
+        alias_map = {"d": "public.deudores", "c": "public.creditos"}
         group_by = [
             {
                 "table_alias": "d",
@@ -349,17 +352,28 @@ class TestBuildTenantScopeCondition:
 class TestBuildTableAliasMap:
     def test_default_alias_is_table_name(self):
         alias_map = build_table_alias_map([{"name": "creditos"}])
-        assert alias_map == {"public.creditos": "creditos"}
+        assert alias_map == {"creditos": "public.creditos"}
 
     def test_explicit_alias(self):
         alias_map = build_table_alias_map([{"name": "creditos", "alias": "c"}])
-        assert alias_map == {"public.creditos": "c"}
+        assert alias_map == {"c": "public.creditos"}
 
     def test_duplicate_alias_rejected(self):
         with pytest.raises(ValueError, match="está repetido"):
             build_table_alias_map(
                 [{"name": "creditos", "alias": "x"}, {"name": "deudores", "alias": "x"}]
             )
+
+    def test_self_join_with_distinct_aliases_does_not_collide(self):
+        """Dos entradas de la MISMA tabla con alias distintos no deben pisarse --
+        antes, indexar por nombre de tabla colapsaba la segunda sobre la primera."""
+        alias_map = build_table_alias_map(
+            [
+                {"name": "creditos", "alias": "c1"},
+                {"name": "creditos", "alias": "c2"},
+            ]
+        )
+        assert alias_map == {"c1": "public.creditos", "c2": "public.creditos"}
 
 
 class TestResolveAlias:
@@ -384,6 +398,22 @@ class TestResolveAlias:
         with pytest.raises(ValueError, match="tabla desconocida"):
             resolve_alias(tables, "does_not_exist")
 
+    def test_self_join_resolves_by_explicit_alias(self):
+        tables = [
+            {"name": "creditos", "alias": "c1"},
+            {"name": "creditos", "alias": "c2"},
+        ]
+        assert resolve_alias(tables, "c1") == "c1"
+        assert resolve_alias(tables, "c2") == "c2"
+
+    def test_self_join_bare_table_name_raises_clear_error(self):
+        tables = [
+            {"name": "creditos", "alias": "c1"},
+            {"name": "creditos", "alias": "c2"},
+        ]
+        with pytest.raises(ValueError, match="self-join"):
+            resolve_alias(tables, "creditos")
+
 
 class TestResolveFullTableName:
     def test_single_table(self):
@@ -393,6 +423,22 @@ class TestResolveFullTableName:
     def test_by_alias(self):
         tables = [{"name": "creditos", "alias": "c"}]
         assert resolve_full_table_name(tables, "c") == "public.creditos"
+
+    def test_self_join_resolves_by_explicit_alias(self):
+        tables = [
+            {"name": "creditos", "alias": "c1"},
+            {"name": "creditos", "alias": "c2"},
+        ]
+        assert resolve_full_table_name(tables, "c1") == "public.creditos"
+        assert resolve_full_table_name(tables, "c2") == "public.creditos"
+
+    def test_self_join_bare_table_name_raises_clear_error(self):
+        tables = [
+            {"name": "creditos", "alias": "c1"},
+            {"name": "creditos", "alias": "c2"},
+        ]
+        with pytest.raises(ValueError, match="self-join"):
+            resolve_full_table_name(tables, "creditos")
 
 
 class TestIsAggregateMode:
@@ -465,3 +511,14 @@ class TestNormalizeAggregateSpecs:
                 [],
                 [],
             )
+
+
+class TestSerializeValue:
+    def test_decimal_becomes_string_not_float(self):
+        """float(Decimal("0.1")) pierde precision -- str no."""
+        assert serialize_value(Decimal("12345.6789012345")) == "12345.6789012345"
+
+    def test_passthrough_for_other_types(self):
+        assert serialize_value("texto") == "texto"
+        assert serialize_value(42) == 42
+        assert serialize_value(None) is None

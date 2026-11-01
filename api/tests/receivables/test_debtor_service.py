@@ -363,3 +363,47 @@ class TestRelatedContactsScopedToPortfolio:
         assert result.debtor.id == titular.id
         codebtor_ids = {c.id for c in result.codebtors}
         assert codebtor_ids == {codebtor_in_a.id}
+
+
+class TestPhonePrefixScopedByPortfolio:
+    """Un deudor con créditos en portafolios de países distintos (misma empresa) debe
+    resolver el indicativo telefónico del portafolio de la operación en curso, no el
+    del crédito más reciente en cualquier portafolio."""
+
+    async def test_uses_the_requested_portfolio_country_not_the_most_recent_credit(
+        self, db_session, make_user_session_factory
+    ):
+        org = build_organization()
+        db_session.add(org)
+        await db_session.flush()
+        portfolio_co = build_portfolio(org.id, country="CO")
+        portfolio_mx = build_portfolio(org.id, country="MX")
+        db_session.add_all([portfolio_co, portfolio_mx])
+        await db_session.flush()
+
+        debtor = build_debtor(org.id)
+        db_session.add(debtor)
+        await db_session.flush()
+        # El crédito en CO es el más "reciente" en orden de inserción -- si el fix
+        # no filtrara por portfolio_id, tomaría su indicativo (57) aunque la
+        # operación en curso sea sobre el portafolio MX.
+        db_session.add_all(
+            [
+                build_credit(portfolio_co.id, debtor.id),
+                build_credit(portfolio_mx.id, debtor.id),
+            ]
+        )
+        await db_session.flush()
+
+        service = build_service(db_session)
+        session = org_session(make_user_session_factory, org.id)
+        data = CreateContactMethodRequest(
+            contact_type=ContactMethodType.PHONE, contact_value="3001234567"
+        )
+
+        result = await service.create_contact_method(
+            debtor.id, data, session, portfolio_id=portfolio_mx.id
+        )
+
+        assert result.contact_value.startswith("52")
+        assert not result.contact_value.startswith("57")

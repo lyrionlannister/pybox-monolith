@@ -2,6 +2,9 @@
 
 from fastapi import HTTPException, status
 
+from app_platform.schema_manager.constants.query_constants import (
+    TENANT_SCOPED_TABLES,
+)
 from app_platform.schema_manager.dependencies import (
     DdlServiceDep,
     DmlServiceDep,
@@ -16,6 +19,7 @@ from app_platform.schema_manager.schemas.database_schemas import (
     FieldInfo,
     OperationResponse,
 )
+from app_platform.schema_manager.utils.query_utils import sanitize_table_name
 from core.config.api_router import APIRouter
 from core.config.database_config import db_config
 from core.security.dependencies import CurrentSession
@@ -75,9 +79,18 @@ async def list_table_fields(
     # Excepción a la regla "global only" de este router: el query-builder de
     # segmentos/reportes necesita listar los campos de una tabla para construir
     # filtros. Solo expone nombres/tipos de columnas (no datos), por lo que se
-    # permite a cualquier usuario con acceso a una organización.
+    # permite a cualquier usuario con acceso a una organización -- pero acotado al
+    # mismo catálogo que ya usa DmlService (TENANT_SCOPED_TABLES), no cualquier
+    # tabla física de la base: si no, cualquier usuario con organización podría
+    # inspeccionar el esquema de tablas fuera del alcance de reportes/segmentos
+    # (ej. usuarios, facturación). Un admin global sigue viendo cualquier tabla:
+    # este mismo router lo deja crear/alterar tablas arbitrarias más abajo, y
+    # necesita poder inspeccionar el resultado.
     require_org_or_global(session)
-    raw = await service.get_table_fields(schema_name, table_name)
+    schema, table = sanitize_table_name(f"{schema_name}.{table_name}")
+    if not session.is_global and f"{schema}.{table}" not in TENANT_SCOPED_TABLES:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Tabla no encontrada")
+    raw = await service.get_table_fields(schema, table)
     return [
         FieldInfo(
             name=col["name"], type=str(col["type"]), enum_values=col["enum_values"]

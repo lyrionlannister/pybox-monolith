@@ -368,7 +368,9 @@ class CampaignService:
         user_session: UserSession,
     ) -> CampaignModel:
         organization_id = await self._check_portfolio_access(user_session, portfolio_id)
-        campaign = await self.get_by_id(campaign_id, portfolio_id, user_session)
+        campaign = await self._repo.get_by_id_and_portfolio(campaign_id, portfolio_id)
+        if campaign is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Campaña no encontrada")
         self._assert_valid_days_of_week(data.days_of_week)
         self._assert_valid_day_of_month(data.day_of_month)
 
@@ -442,7 +444,9 @@ class CampaignService:
                 "el pago para reanudarlos.",
             )
 
-        campaign = await self.get_by_id(campaign_id, portfolio_id, user_session)
+        campaign = await self._repo.get_by_id_and_portfolio(campaign_id, portfolio_id)
+        if campaign is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Campaña no encontrada")
 
         if campaign.status not in (CampaignStatus.DRAFT, CampaignStatus.PAUSED):
             raise HTTPException(

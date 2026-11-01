@@ -1,7 +1,4 @@
 [MAIN]
-# Migraciones autogeneradas por Alembic: nombre de módulo = hash de revisión,
-# `op` es un proxy dinámico que pylint no puede resolver, y el orden de imports
-# lo fija la plantilla de Alembic. No se edita el estilo de estos archivos.
 ignore-paths=.*alembic[\\/]versions[\\/].*
 
 [MESSAGES CONTROL]
@@ -9,16 +6,8 @@ disable=
     missing-function-docstring,
     missing-class-docstring,
     too-few-public-methods,
-    # func.now(), func.count(), etc. son proxies dinámicos de SQLAlchemy que
-    # pylint no puede resolver estáticamente; no hay plugin oficial que los
-    # entienda mejor. Mismo motivo para Mapped[...] y otros genéricos.
     not-callable,
     unsubscriptable-object,
-    # Categorías de "forma"/tamaño que el proyecto decidió no perseguir de forma
-    # proactiva (ver skill pylint-compliance): dividir una función o clase solo
-    # para bajar un contador no mejora la legibilidad por sí mismo, y
-    # duplicate-code dispara con falsos positivos entre archivos que comparten
-    # estructura (tests, repositories) sin compartir lógica real.
     duplicate-code,
     too-many-arguments,
     too-many-positional-arguments,
@@ -29,27 +18,16 @@ disable=
     too-many-public-methods,
     too-many-lines,
     too-many-return-statements,
-    # `except Exception` es el patrón correcto en los límites del sistema (jobs
-    # en background, llamadas a proveedores externos, loops de batch/CSV, el
-    # middleware global de excepciones): no debe tumbar el proceso por un fallo
-    # no previsto, y acotar a tipos específicos ahí sería adivinar sin
-    # beneficio real. Revisado caso por caso antes de deshabilitarlo.
     broad-exception-caught,
+    redefined-outer-name,
+    unused-argument,
 
 [VARIABLES]
-# `id` es el nombre idiomático del identificador de recurso en la API REST (y
-# en los path params); `type`/`credits` son de dominio (tipo de credencial,
-# créditos de receivables). Sombrean builtins poco usados (id(), type(),
-# credits del REPL) solo dentro de la función — shadowing inofensivo, no vale
-# la pena renombrar 25+ firmas (y sus paths) por esto.
 allowed-redefined-builtins=id,type,credits
 
 [FORMAT]
 max-line-length=88
 
 [DESIGN]
-# Los services de este proyecto reciben la sesión y sus repositories por
-# constructor (inyección de dependencias); constructores con varios
-# repositories son el patrón esperado, no un code smell.
 max-args=10
 max-positional-arguments=10

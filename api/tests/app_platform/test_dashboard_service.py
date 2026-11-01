@@ -6,6 +6,7 @@ armado de la serie mensual con huecos) sin levantar datos reales de créditos.
 
 import uuid
 from datetime import date
+from decimal import Decimal
 from unittest.mock import AsyncMock
 
 import pytest
@@ -35,7 +36,7 @@ class TestGetOrganizationStats:
             codeudores=10,
             clientes_unicos=80,
             documentos_unicos=5,
-            total_mora=12345.6,
+            total_mora=Decimal("12345.6"),
         )
         repos[
             "portfolio_repo"
@@ -49,7 +50,7 @@ class TestGetOrganizationStats:
         assert result.credits_count == 100
         assert result.debtors_count == 50
         assert result.unique_debtors_count == 80
-        assert result.total_overdue_amount == 12345.6
+        assert result.total_overdue_amount == Decimal("12345.6")
         assert result.debtors_loaded_percentage == 62.5
 
     async def test_percentage_is_zero_when_no_unique_debtors(self):

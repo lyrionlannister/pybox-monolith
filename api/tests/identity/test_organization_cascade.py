@@ -22,6 +22,8 @@ from identity.users.repository.user_repository import UserRepository
 from messaging.campaigns.repository.campaign_repository import CampaignRepository
 from receivables.credits.repository.credit_repository import CreditRepository
 from receivables.portfolios.repository.portfolio_repository import PortfolioRepository
+from receivables.segments.models.segment_model import SegmentModel
+from receivables.segments.repository.segment_repository import SegmentRepository
 from tests.messaging.campaigns.conftest import build_campaign, get_channel_id
 from tests.receivables.conftest import (
     add_organization,
@@ -49,6 +51,9 @@ async def _organization_with_everything(db_session, user_id):
     await db_session.flush()
     credit = build_credit(portfolio.id, debtor.id)
     campaign = build_campaign(portfolio.id, await get_channel_id(db_session))
+    segment = SegmentModel(
+        name="Segmento X", filter_criteria={}, portfolio_id=portfolio.id
+    )
     membership = OrganizationMembershipModel(
         user_id=user_id, organization_id=org.id, created_by=user_id
     )
@@ -58,16 +63,16 @@ async def _organization_with_everything(db_session, user_id):
         scope=UserScope.ORGANIZATION,
         organization_id=org.id,
     )
-    db_session.add_all([credit, campaign, membership, role])
+    db_session.add_all([credit, campaign, segment, membership, role])
     await db_session.flush()
-    return org, portfolio, credit, campaign
+    return org, portfolio, credit, campaign, segment
 
 
 class TestSoftDeleteOrganizationCascade:
-    async def test_cascades_to_members_roles_portfolios_credits_and_campaigns(
+    async def test_cascades_to_members_roles_portfolios_credits_campaigns_and_segments(
         self, db_session, real_admin_user_id
     ):
-        org, portfolio, credit, campaign = await _organization_with_everything(
+        org, portfolio, credit, campaign, segment = await _organization_with_everything(
             db_session, real_admin_user_id
         )
 
@@ -90,6 +95,7 @@ class TestSoftDeleteOrganizationCascade:
         assert await PortfolioRepository(db_session).get_by_id(portfolio.id) is None
         assert await CreditRepository(db_session).get_by_id(credit.id) is None
         assert await CampaignRepository(db_session).get_by_id(campaign.id) is None
+        assert await SegmentRepository(db_session).get_by_id(segment.id) is None
 
     async def test_users_are_kept_without_an_organization(
         self, db_session, real_admin_user_id
@@ -114,7 +120,7 @@ class TestRestoreOrganizationCascade:
     async def test_restores_everything_that_fell_with_the_organization(
         self, db_session, real_admin_user_id
     ):
-        org, portfolio, credit, campaign = await _organization_with_everything(
+        org, portfolio, credit, campaign, segment = await _organization_with_everything(
             db_session, real_admin_user_id
         )
         service = build_service(db_session)
@@ -139,11 +145,12 @@ class TestRestoreOrganizationCascade:
         assert await PortfolioRepository(db_session).get_by_id(portfolio.id) is not None
         assert await CreditRepository(db_session).get_by_id(credit.id) is not None
         assert await CampaignRepository(db_session).get_by_id(campaign.id) is not None
+        assert await SegmentRepository(db_session).get_by_id(segment.id) is not None
 
     async def test_does_not_restore_a_portfolio_deleted_before_the_organization(
         self, db_session, real_admin_user_id
     ):
-        org, _, _, _ = await _organization_with_everything(
+        org, _, _, _, _ = await _organization_with_everything(
             db_session, real_admin_user_id
         )
         old_portfolio = build_portfolio(org.id)

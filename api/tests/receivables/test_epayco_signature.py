@@ -35,3 +35,11 @@ class TestVerifyEpaycoConfirmationSignature:
         message = "28770^p-key-test^26291500^705885651^10000^COP"
         fields["x_signature"] = hashlib.sha256(message.encode("utf-8")).hexdigest()
         assert not verify_epayco_confirmation_signature(fields, "28770", "wrong-p-key")
+
+    def test_rejects_empty_p_key_even_if_signature_matches(self):
+        """Credencial incompleta (p_key vacío) no debe aceptar una firma calculada
+        con esa misma llave vacía -- sería trivialmente falsificable."""
+        fields = self._fields()
+        message = "28770^^26291500^705885651^10000^COP"
+        fields["x_signature"] = hashlib.sha256(message.encode("utf-8")).hexdigest()
+        assert not verify_epayco_confirmation_signature(fields, "28770", "")

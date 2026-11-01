@@ -19,6 +19,7 @@ ver `.claude/plans/ivr-helena/02-contrato-helena.md`):
 from __future__ import annotations
 
 import uuid
+from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -95,8 +96,20 @@ class BulkContext:
 
 #: Cache de proceso `bulkId -> BulkContext`. El mapeo es inmutable una vez
 #: despachado el bulk, así que no hace falta invalidarlo (mismo criterio que
-#: `iris:CallMonitorProjectionService.bulkIdToCampaignId`).
-_bulk_context_cache: dict[str, BulkContext] = {}
+#: `iris:CallMonitorProjectionService.bulkIdToCampaignId`) -- pero sí acotarlo en
+#: tamaño: sin límite, un proceso de larga vida con muchas campañas IVR a lo largo
+#: de meses lo haría crecer indefinidamente. Se descarta el bulkId usado hace más
+#: tiempo al superar el límite (mismo criterio que `_MAX_QUEUE_SIZE` en
+#: `ivr_stream_emitter`).
+_BULK_CONTEXT_CACHE_MAX_SIZE = 2000
+_bulk_context_cache: OrderedDict[str, BulkContext] = OrderedDict()
+
+
+def _cache_bulk_context(bulk_id: str, context: BulkContext) -> None:
+    _bulk_context_cache[bulk_id] = context
+    _bulk_context_cache.move_to_end(bulk_id)
+    if len(_bulk_context_cache) > _BULK_CONTEXT_CACHE_MAX_SIZE:
+        _bulk_context_cache.popitem(last=False)
 
 
 class IvrEventService:
@@ -446,7 +459,7 @@ class IvrEventService:
             campaign_id=contact.campaign_id,
             organization_id=contact.organization_id,
         )
-        _bulk_context_cache[bulk_id] = context
+        _cache_bulk_context(bulk_id, context)
         return context
 
     async def _resolve_bulk_context_for_campaign(self, bulk_id: str) -> BulkContext:
@@ -464,7 +477,7 @@ class IvrEventService:
             campaign_id=contacts[0].campaign_id,
             organization_id=contacts[0].organization_id,
         )
-        _bulk_context_cache[bulk_id] = context
+        _cache_bulk_context(bulk_id, context)
         return context
 
     async def _propagate_to_contact(self, row: IvrInteractionModel) -> None:

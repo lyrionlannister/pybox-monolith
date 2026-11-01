@@ -38,16 +38,22 @@ class WhatsAppMessageRepository(SoftDeleteRepositoryBase[WhatsAppMessageModel]):
         )
         return result.scalar_one_or_none()
 
-    async def list_by_chat(self, chat_id: uuid.UUID) -> list[WhatsAppMessageModel]:
+    async def list_by_chat(
+        self, chat_id: uuid.UUID, limit: int = 200
+    ) -> list[WhatsAppMessageModel]:
+        """Los `limit` mensajes más recientes del hilo, en orden ascendente (igual
+        que antes) -- sin tope, un hilo de larga duración (meses de conversación con
+        un deudor) trae todos sus mensajes completos en cada apertura."""
         result = await self.session.execute(
             select(WhatsAppMessageModel)
             .where(
                 WhatsAppMessageModel.chat_id == chat_id,
                 WhatsAppMessageModel.deleted_at.is_(None),
             )
-            .order_by(WhatsAppMessageModel.sent_at.asc())
+            .order_by(WhatsAppMessageModel.sent_at.desc())
+            .limit(limit)
         )
-        return list(result.scalars().all())
+        return list(reversed(result.scalars().all()))
 
     async def soft_delete_by_organization(
         self, organization_id: uuid.UUID, deleted_at: datetime

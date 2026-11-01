@@ -3,6 +3,10 @@
 import uuid
 
 from app_platform.countries.enums.country_enums import Nationality
+from app_platform.notifications.enums.notification_enums import (
+    NotificationCategory,
+    NotificationType,
+)
 from app_platform.notifications.services.notification_service import NotificationService
 from core.cache.cache_service import cache_service
 from core.config.logger import logger
@@ -80,15 +84,19 @@ async def process_and_notify(
                 f", {result.failed_rows} fallidos" if result.failed_rows > 0 else ""
             )
             notif_type = (
-                "error"
+                NotificationType.ERROR
                 if result.failed_rows == result.total_rows
-                else ("warning" if result.failed_rows > 0 else "success")
+                else (
+                    NotificationType.WARNING
+                    if result.failed_rows > 0
+                    else NotificationType.SUCCESS
+                )
             )
             await notification_service.create_notification(
                 user_id=user_id,
                 title="Portafolio listo",
                 body=f"{result.processed_rows} registros procesados{failed_note}.",
-                category="portfolio",
+                category=NotificationCategory.PORTFOLIO,
                 notif_type=notif_type,
                 link=(
                     f"/my-companies/portfolios?org={organization_id}"
@@ -163,15 +171,19 @@ async def append_and_notify(
                 f", {result.failed_rows} fallidos" if result.failed_rows > 0 else ""
             )
             notif_type = (
-                "error"
+                NotificationType.ERROR
                 if result.failed_rows == result.total_rows
-                else ("warning" if result.failed_rows > 0 else "success")
+                else (
+                    NotificationType.WARNING
+                    if result.failed_rows > 0
+                    else NotificationType.SUCCESS
+                )
             )
             await notification_service.create_notification(
                 user_id=user_id,
                 title="Datos agregados al portafolio",
                 body=f"{result.processed_rows} registros procesados{failed_note}.",
-                category="portfolio",
+                category=NotificationCategory.PORTFOLIO,
                 notif_type=notif_type,
                 link=(
                     f"/my-companies/portfolios?org={organization_id}"
@@ -242,15 +254,19 @@ async def update_and_notify(
                 f", {result.failed_rows} fallidos" if result.failed_rows > 0 else ""
             )
             notif_type = (
-                "error"
+                NotificationType.ERROR
                 if result.failed_rows == result.total_rows
-                else ("warning" if result.failed_rows > 0 else "success")
+                else (
+                    NotificationType.WARNING
+                    if result.failed_rows > 0
+                    else NotificationType.SUCCESS
+                )
             )
             await notification_service.create_notification(
                 user_id=user_id,
                 title="Portafolio actualizado",
                 body=f"{result.processed_rows} registros procesados{failed_note}.",
-                category="portfolio",
+                category=NotificationCategory.PORTFOLIO,
                 notif_type=notif_type,
                 link=(
                     f"/my-companies/portfolios?org={organization_id}"
