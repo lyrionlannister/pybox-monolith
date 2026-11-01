@@ -40,6 +40,7 @@ class MercadoPagoClient(GatewayHttpClient):
         description: str,
         payer_email: str,
     ) -> dict[str, Any]:
+        # URL de la doc no se puede partir sin romperla
         # pylint: disable=line-too-long
         """
         Crea una Order en modo manual: no cobra de inmediato, devuelve

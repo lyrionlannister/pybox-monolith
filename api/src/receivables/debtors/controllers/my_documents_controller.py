@@ -15,8 +15,8 @@ from receivables.debtors.schemas.debtor_document_schemas import (
     DebtorDocumentResponse,
 )
 
-# Antes vivía en `/documents/mine*`. Se movió al dominio dueño del recurso: el documento
-# cuelga de un deudor (`documentos_deudor`), no de una tabla polimórfica genérica.
+# Vive en el dominio dueño del recurso: el documento cuelga de un deudor
+# (`documentos_deudor`), no de una tabla polimórfica genérica.
 router = APIRouter(prefix="/debtors/me/documents", tags=["Documentos del titular"])
 
 

@@ -252,8 +252,6 @@ class OnboardingService:
             contact_type = ContactMethodType.PHONE
             value = user.phone_number
         try:
-            # Savepoint: un fallo aquí (p. ej. un SELECT que envenene la transacción)
-            # solo revierte este bloque anidado, no la verificación OTP ya persistida.
             async with self._session.begin_nested():
                 await self._self_service_contact_service.register_verified_contact(
                     document_type=user.document_type,
