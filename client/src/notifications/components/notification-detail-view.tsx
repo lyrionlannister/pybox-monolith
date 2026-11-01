@@ -24,7 +24,6 @@ export const NotificationDetailView: React.FC<NotificationDetailViewProps> = ({ 
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Header card */}
       <Card>
         <div className="flex items-start gap-4">
           <NotifIcon type={n.notifType} size="lg" />
@@ -45,7 +44,6 @@ export const NotificationDetailView: React.FC<NotificationDetailViewProps> = ({ 
           </div>
         </div>
 
-        {/* Body */}
         <div className="mt-5">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
             Mensaje del servidor
@@ -58,7 +56,6 @@ export const NotificationDetailView: React.FC<NotificationDetailViewProps> = ({ 
         </div>
       </Card>
 
-      {/* Details card */}
       {detailEntries.length > 0 && (
         <Card>
           <CardTitle>Detalles del proceso</CardTitle>
@@ -80,7 +77,6 @@ export const NotificationDetailView: React.FC<NotificationDetailViewProps> = ({ 
         </Card>
       )}
 
-      {/* Actions */}
       <div className="flex items-center gap-3">
         {n.link ? (
           <Link

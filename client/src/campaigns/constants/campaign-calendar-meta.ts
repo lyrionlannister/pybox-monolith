@@ -8,7 +8,7 @@ export const CAMPAIGN_PERIODICITY_LABELS: Record<Periodicity, string> = {
   MENSUAL: "Mensual",
 };
 
-// Solo estas campañas admiten reprogramación desde el calendario.
+/** Solo estas campañas admiten reprogramación desde el calendario. */
 export const CAMPAIGN_EDITABLE_STATUSES: CampaignStatus[] = ["PROGRAMADA", "PAUSADA"];
 
 export interface CampaignStatusMeta {

@@ -35,7 +35,6 @@ export const useTemplateEditorForm = (
   const [saving, setSaving] = useState(false);
   const whatsapp = useWhatsAppTemplateForm(portfolioId, variables);
 
-  // En modo edición, cargar la plantilla existente
   useEffect(() => {
     if (!isEditing || !portfolioId) return;
     apiClient(`/templates/${id}?portfolioId=${portfolioId}`, { method: "GET" })

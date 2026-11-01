@@ -44,7 +44,6 @@ export const EntityExecuteModal: React.FC<EntityExecuteModalProps> = ({
 
       {!result && (
         <div className="space-y-4">
-          {/* Mode selector */}
           <div className="flex gap-3">
             {(["preview", "audit"] as const).map((m) => (
               <button
@@ -62,7 +61,6 @@ export const EntityExecuteModal: React.FC<EntityExecuteModalProps> = ({
             ))}
           </div>
 
-          {/* Limit */}
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               Límite de filas

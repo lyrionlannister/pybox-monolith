@@ -77,7 +77,6 @@ export const WhatsAppChatsPage: React.FC = () => {
 
   return (
     <div className="flex h-[calc(100vh-174px)] gap-5 overflow-hidden">
-      {/* Sidebar */}
       <div className="flex flex-col w-80 shrink-0 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-dark overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
           <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">Chats de WhatsApp</h2>
@@ -121,7 +120,6 @@ export const WhatsAppChatsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Thread panel */}
       <div className="flex flex-col flex-1 min-w-0 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-dark overflow-hidden">
         {!selected ? (
           <div className="flex-1 flex items-center justify-center">

@@ -79,7 +79,6 @@ export const ChatPage: React.FC = () => {
       <div
         className={`${selected ? "hidden md:flex" : "flex"} flex-col w-full md:w-80 shrink-0 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-dark overflow-hidden`}
       >
-        {/* Sidebar header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
           <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">Chats</h2>
           <div className="flex items-center gap-2">
@@ -110,7 +109,6 @@ export const ChatPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Search */}
         <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-800">
           <input
             type="text"
@@ -121,7 +119,6 @@ export const ChatPage: React.FC = () => {
           />
         </div>
 
-        {/* New chat panel */}
         {showNewChat && (
           <div className="border-b border-gray-200 dark:border-gray-800 px-4 py-2 max-h-48 overflow-y-auto custom-scrollbar">
             {availableUsers.length === 0 ? (
@@ -148,7 +145,6 @@ export const ChatPage: React.FC = () => {
           </div>
         )}
 
-        {/* Chat list */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {chatsLoading ? (
             <div className="mt-6"><Loader size="sm" /></div>
@@ -202,7 +198,6 @@ export const ChatPage: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* Panel header */}
             <div className="relative flex items-center gap-3 px-5 py-3 border-b border-gray-200 dark:border-gray-800">
               <button
                 type="button"
@@ -255,7 +250,6 @@ export const ChatPage: React.FC = () => {
               )}
             </div>
 
-            {/* Messages */}
             <div
               ref={scrollRef}
               onScroll={handleScroll}
@@ -289,7 +283,6 @@ export const ChatPage: React.FC = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
             <div className="flex items-end gap-3 px-5 py-3 border-t border-gray-200 dark:border-gray-800">
               <textarea
                 value={input}

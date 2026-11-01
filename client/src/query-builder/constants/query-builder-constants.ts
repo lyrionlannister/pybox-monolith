@@ -27,8 +27,7 @@ export const JOIN_TYPES: { value: JoinHow; label: string }[] = [
   { value: "full", label: "Full outer join" },
 ];
 
-// Postgres no define LIKE/ILIKE sobre un enum (falla con "operator does not exist"),
-// así que no se ofrecen cuando la columna filtrada es un enum.
+/** Postgres no define LIKE/ILIKE sobre un enum (falla con "operator does not exist"). */
 export const ENUM_UNSUPPORTED_OPS: FilterOp[] = ["like", "ilike"];
 
 export const OPS_WITHOUT_VALUE: FilterOp[] = ["is_null", "is_not_null"];

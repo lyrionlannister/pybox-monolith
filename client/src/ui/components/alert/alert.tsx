@@ -2,17 +2,6 @@ import { Link } from "react-router";
 import { variantClasses, icons } from "@/ui/utils/alert-utils";
 import { AlertProps } from "@/types/props/alert-props";
 
-/**
- * Componente visual para mostrar alertas informativas con estilos y variantes.
- *
- * @param variant - Tipo de alerta para definir el estilo (success, error, warning, info).
- * @param title - Título de la alerta.
- * @param message - Contenido del mensaje de la alerta.
- * @param showLink - Si se debe mostrar un enlace adicional.
- * @param linkHref - URL a la que redirige el enlace.
- * @param linkText - Texto que se muestra en el enlace.
- * @returns Componente React de alerta.
- */
 export const Alert: React.FC<AlertProps> = ({
   variant,
   title,

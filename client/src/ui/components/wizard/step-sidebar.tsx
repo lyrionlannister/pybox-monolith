@@ -1,8 +1,10 @@
 import { CheckCircle } from "lucide-react";
 import type { WizardStepDef } from "@/ui/types/wizard-step-def";
 
-// Indicador de pasos compartido por los wizards multi-paso (crear empresa,
-// crear ticket, crear usuario, etc.) — todos usan el mismo layout vertical.
+/**
+ * Indicador de pasos compartido por los wizards multi-paso (crear empresa,
+ * crear ticket, crear usuario, etc.) — todos usan el mismo layout vertical.
+ */
 export const StepSidebar: React.FC<{ steps: WizardStepDef[]; current: number }> = ({
   steps,
   current,

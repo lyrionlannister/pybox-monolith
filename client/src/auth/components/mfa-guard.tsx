@@ -70,7 +70,6 @@ export const MfaGuard: React.FC<MfaGuardProps> = ({ children }) => {
 
   const otpModal = (
     <Modal isOpen onClose={() => {}} showCloseButton={false} isFullscreen className="flex bg-white dark:bg-gray-900">
-      {/* Left panel */}
       <div className="hidden lg:flex lg:w-80 xl:w-96 flex-col justify-between bg-brand-600 px-10 py-12 text-white shrink-0">
         <div>
           <div className="mb-12">
@@ -91,7 +90,6 @@ export const MfaGuard: React.FC<MfaGuardProps> = ({ children }) => {
         <div className="text-xs text-brand-300">Autenticación de dos factores</div>
       </div>
 
-      {/* Right panel */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-6 sm:px-12 lg:px-16">
         <div className="w-full max-w-lg space-y-5">
           <div>

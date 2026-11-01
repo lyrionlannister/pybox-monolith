@@ -10,9 +10,11 @@ import { useCampaignWeekdays } from "@/campaigns/hooks/use-campaign-weekdays";
 import { CAMPAIGN_EDITABLE_STATUSES } from "@/campaigns/constants/campaign-calendar-meta";
 import { buildCalendarEvents, buildCampaignEditorForm } from "@/campaigns/utils/campaign-utils";
 
-// Encapsula fetch (timeline, detalle al hacer click, guardado de reprogramación)
-// y estado del calendario de campañas para que campaigns-calendar.tsx quede
-// solo como componente de presentación.
+/**
+ * Encapsula fetch (timeline, detalle al hacer click, guardado de reprogramación)
+ * y estado del calendario de campañas para que campaigns-calendar.tsx quede
+ * solo como componente de presentación.
+ */
 export const useCampaignCalendar = (organizationId: string, isAdmin: boolean) => {
   const { apiClient } = useApiClient();
   const [range, setRange] = useState<{ from: string; to: string }>({ from: "", to: "" });

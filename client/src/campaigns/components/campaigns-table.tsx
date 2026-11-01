@@ -106,7 +106,6 @@ export const CampaignsTable: React.FC<CampaignsTableProps> = ({
 
   return (
     <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/5 dark:bg-white/3">
-      {/* Toolbar */}
       <div className="shrink-0 flex flex-col gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500 dark:text-gray-400">Mostrar</span>
@@ -133,7 +132,6 @@ export const CampaignsTable: React.FC<CampaignsTableProps> = ({
         </div>
       </div>
 
-      {/* Desktop table */}
       <div className="hidden flex-1 min-h-0 overflow-auto custom-scrollbar sm:block">
         <Table>
           <TableHeader>
@@ -190,7 +188,6 @@ export const CampaignsTable: React.FC<CampaignsTableProps> = ({
         </Table>
       </div>
 
-      {/* Mobile cards */}
       <div className="flex flex-1 min-h-0 flex-col gap-3 overflow-y-auto p-4 sm:hidden">
         {loading ? (
           <div className="py-10"><Loader size="sm" /></div>
@@ -230,7 +227,6 @@ export const CampaignsTable: React.FC<CampaignsTableProps> = ({
         )}
       </div>
 
-      {/* Footer */}
       <div className="shrink-0 border-t border-gray-100 py-3 px-4 dark:border-white/5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-gray-500 dark:text-gray-400">

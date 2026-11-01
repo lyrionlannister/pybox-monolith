@@ -1,10 +1,12 @@
 import { Select } from "@/ui/components/inputs/select";
 import type { EnumValueInputProps } from "@/query-builder/types/enum-value-input-props";
 
-// Valor de un filtro sobre una columna enum de PostgreSQL: en vez de texto libre se
-// ofrecen los valores reales del enum. La forma depende del operador (ver
-// OPS_WITH_MULTIPLE_VALUES): in/not_in -> selección múltiple, between -> desde/hasta,
-// el resto -> un único select.
+/**
+ * Valor de un filtro sobre una columna enum de PostgreSQL: en vez de texto libre se
+ * ofrecen los valores reales del enum. La forma depende del operador (ver
+ * OPS_WITH_MULTIPLE_VALUES): in/not_in -> selección múltiple, between -> desde/hasta,
+ * el resto -> un único select.
+ */
 export const EnumValueInput: React.FC<EnumValueInputProps> = ({ options, op, value, onChange }) => {
   const selectOptions = options.map((o) => ({ value: o, label: o }));
 

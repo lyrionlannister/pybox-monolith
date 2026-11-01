@@ -38,9 +38,11 @@ const EMPTY: CampaignEditorFormState = {
   dayOfMonth: null,
 };
 
-// Encapsula todo el estado/side-effects del wizard de campañas (carga de la
-// campaña en edición, catálogos relacionados, validaciones por paso y el
-// submit) para que campaign-editor-page.tsx quede solo como orquestación.
+/**
+ * Encapsula todo el estado/side-effects del wizard de campañas (carga de la
+ * campaña en edición, catálogos relacionados, validaciones por paso y el
+ * submit) para que campaign-editor-page.tsx quede solo como orquestación.
+ */
 export const useCampaignEditor = (id: string | undefined, portfolioId: string) => {
   const navigate = useNavigate();
   const { apiClient } = useApiClient();

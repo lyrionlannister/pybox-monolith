@@ -49,7 +49,6 @@ export const SelfUserHome: React.FC = () => {
           <SelfObligationsSummary summary={summary} loading={loading} />
 
           <div className="grid gap-6 xl:grid-cols-3 xl:items-stretch">
-            {/* Columna principal: calendario */}
             <section className="xl:col-span-2">
               <h2 className="mb-3 text-base font-semibold text-gray-800 dark:text-white/90">
                 Calendario de obligaciones

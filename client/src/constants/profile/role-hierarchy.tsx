@@ -1,12 +1,13 @@
 import { Crown, Headphones, Shield, ShieldCheck, User, Users } from "lucide-react";
 import type { HierarchyTier } from "@/types/props/profile-meta-card-props";
 
-// Fase 9 de la auditoría: antes usaba una 5ta paleta (amber/violet/blue/teal/sky)
-// ajena a las 4 familias semánticas del proyecto (brand/success/error/warning). Los
-// roles de admin (global y de organización) comparten "brand"; los de soporte
-// comparten "warning"; el usuario de organización usa "success"; el titular (SELF)
-// se queda neutro en gris -- la distinción de RANGO sigue viéndose por la cantidad
-// de puntos en HierarchyDots (tier), no por tener un color único cada uno.
+/**
+ * Colores limitados a las 4 familias semánticas del proyecto (brand/success/error/warning),
+ * no una paleta propia por rol. Admin (global y de organización) comparten "brand"; soporte
+ * comparte "warning"; usuario de organización usa "success"; el titular (SELF) se queda
+ * neutro en gris -- la distinción de RANGO se ve por la cantidad de puntos en
+ * HierarchyDots (tier), no por tener un color único cada uno.
+ */
 export const ROLE_HIERARCHY: Record<string, HierarchyTier> = {
   "ADMINISTRADOR|GLOBAL": {
     tier: 1,

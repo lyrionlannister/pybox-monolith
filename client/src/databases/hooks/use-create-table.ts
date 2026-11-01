@@ -5,9 +5,11 @@ import { useToast } from "@/context/toast-context";
 import { useSchemas } from "@/databases/hooks/use-schemas";
 import type { ColumnDefinition, OperationResponse } from "@/databases/types/database-types";
 
-// Encapsula el estado del wizard de creación de tabla (esquemas disponibles,
-// columnas, validación por paso y el submit al backend) para que
-// create-table-page.tsx quede solo como orquestación.
+/**
+ * Encapsula el estado del wizard de creación de tabla (esquemas disponibles,
+ * columnas, validación por paso y el submit al backend) para que
+ * create-table-page.tsx quede solo como orquestación.
+ */
 export const useCreateTable = () => {
   const navigate = useNavigate();
   const { apiClient } = useApiClient();

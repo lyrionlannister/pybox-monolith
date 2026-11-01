@@ -37,7 +37,6 @@ export const EntityTable: React.FC<EntityTableProps> = ({
 
   return (
     <div className="flex flex-1 min-h-0 flex-col">
-      {/* Desktop */}
       <div className="hidden flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 sm:flex">
         <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
           <Table>
@@ -84,7 +83,6 @@ export const EntityTable: React.FC<EntityTableProps> = ({
         </div>
       </div>
 
-      {/* Mobile */}
       <div className="flex flex-1 min-h-0 flex-col gap-3 overflow-y-auto sm:hidden">
         {entities.map((e) => (
           <div

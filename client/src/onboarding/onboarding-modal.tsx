@@ -49,7 +49,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       className="flex bg-white dark:bg-gray-900"
       ariaLabel={`Configuración de cuenta: ${STEP_LABELS[currentStep]}`}
     >
-      {/* Left panel */}
       <div className="hidden lg:flex lg:w-80 xl:w-96 flex-col justify-between bg-brand-600 px-10 py-12 text-white shrink-0">
         <div>
           <div className="mb-12">
@@ -131,9 +130,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         </div>
       </div>
 
-      {/* Right panel */}
       <div className="flex flex-1 flex-col">
-        {/* Progress bar */}
         <div className="h-1 w-full bg-gray-100 dark:bg-gray-800">
           <div
             className="h-1 bg-brand-500 transition-all duration-500"
@@ -143,7 +140,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
         <div className="flex flex-1 items-center justify-center px-6 py-6 sm:px-12 lg:px-16">
           <div className="w-full max-w-lg">
-            {/* Mobile step indicator */}
             <div className="mb-8 flex items-center gap-2 lg:hidden">
               {steps.map((step, i) => (
                 <div

@@ -10,9 +10,11 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 
 const getBaseScale = (image: SelectedImage) => VIEW_SIZE / Math.min(image.width, image.height);
 
-// Estado y lógica del editor de recorte de foto de perfil: selección de archivo,
-// zoom/arrastre dentro del marco circular, y generación del blob recortado a
-// OUTPUT_SIZE x OUTPUT_SIZE para subir.
+/**
+ * Estado y lógica del editor de recorte de foto de perfil: selección de archivo,
+ * zoom/arrastre dentro del marco circular, y generación del blob recortado a
+ * OUTPUT_SIZE x OUTPUT_SIZE para subir.
+ */
 export const useImageCropper = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);

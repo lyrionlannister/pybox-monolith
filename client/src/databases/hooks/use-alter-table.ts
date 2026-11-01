@@ -9,9 +9,11 @@ import { emptyColumnDefinition } from "@/databases/constants/column-data-type-op
 import type { AlterTableFormState } from "@/databases/types/alter-table-form-state";
 import type { OperationResponse } from "@/databases/types/database-types";
 
-// Encapsula el estado del wizard de alteración de tabla (esquemas/tablas/
-// columnas disponibles, validación por paso y el submit al backend) para que
-// alter-table-page.tsx quede solo como orquestación.
+/**
+ * Encapsula el estado del wizard de alteración de tabla (esquemas/tablas/
+ * columnas disponibles, validación por paso y el submit al backend) para que
+ * alter-table-page.tsx quede solo como orquestación.
+ */
 export const useAlterTable = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

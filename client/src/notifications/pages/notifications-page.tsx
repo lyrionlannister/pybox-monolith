@@ -25,7 +25,6 @@ export const NotificationsPage: React.FC = () => {
   return (
     <ModuleBase pageTitle="Notificaciones">
       <div className="flex gap-0">
-        {/* Left panel — list */}
         <div
           className={`flex flex-col gap-4 shrink-0 lg:w-96 lg:border-r lg:border-gray-100 lg:pr-6 lg:dark:border-gray-800 ${
             selected ? "hidden lg:flex" : "flex w-full"
@@ -89,7 +88,6 @@ export const NotificationsPage: React.FC = () => {
           )}
         </div>
 
-        {/* Right panel — detail */}
         <div
           className={`min-w-0 flex-1 ${
             selected

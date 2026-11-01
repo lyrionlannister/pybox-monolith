@@ -107,7 +107,6 @@ export const StepAggregation: React.FC<SharedStepAggregationProps> = ({
         </p>
       ) : (
         <>
-          {/* Group by */}
           <AggregationSection
             title="Agrupar por"
             description="Columnas usadas para agrupar las filas (ej. id del deudor)."
@@ -132,7 +131,6 @@ export const StepAggregation: React.FC<SharedStepAggregationProps> = ({
             )}
           </AggregationSection>
 
-          {/* Aggregations */}
           <AggregationSection
             title="Agregaciones"
             description="Métricas calculadas por grupo (COUNT, SUM, AVG, MIN, MAX)."
@@ -157,7 +155,6 @@ export const StepAggregation: React.FC<SharedStepAggregationProps> = ({
             )}
           </AggregationSection>
 
-          {/* Having */}
           <AggregationSection
             title="Filtrar grupos (HAVING)"
             description={`Condiciones sobre las métricas, ej. ${copy.havingExampleMetric} > 1.`}
@@ -182,7 +179,6 @@ export const StepAggregation: React.FC<SharedStepAggregationProps> = ({
             )}
           </AggregationSection>
 
-          {/* Order by */}
           <AggregationSection
             title="Ordenar por"
             description="Orden de los resultados agrupados."
