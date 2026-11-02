@@ -186,7 +186,7 @@ class InvoiceRepository(SoftDeleteRepositoryBase[InvoiceModel]):
                 InvoiceModel.due_at.is_not(None),
                 InvoiceModel.due_at < now,
             )
-            .values(status=InvoiceStatus.OVERDUE)
+            .values(**self._touch(status=InvoiceStatus.OVERDUE))
         )
 
     async def mark_blocked(self, now: datetime) -> None:
@@ -199,7 +199,7 @@ class InvoiceRepository(SoftDeleteRepositoryBase[InvoiceModel]):
                 InvoiceModel.block_at.is_not(None),
                 InvoiceModel.block_at < now,
             )
-            .values(status=InvoiceStatus.BLOCKED)
+            .values(**self._touch(status=InvoiceStatus.BLOCKED))
         )
 
     # -- Agregaciones globales (dashboard admin, todas las organizaciones) --------

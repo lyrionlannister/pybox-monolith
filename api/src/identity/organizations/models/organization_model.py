@@ -7,14 +7,17 @@ from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from identity.organizations.enums.organization_enums import (
     EntitySectors,
     VerificationStatus,
 )
 
 
-class OrganizationModel(BaseModel):
+class OrganizationModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     __tablename__ = "entidades"
     __table_args__ = (
         # db-schema-design, ítem 3 (atributo derivado/redundante sin invariante

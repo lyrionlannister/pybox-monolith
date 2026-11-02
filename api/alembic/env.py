@@ -21,6 +21,7 @@ from logging.config import fileConfig
 
 import alembic_postgresql_enum  # pylint: disable=unused-import
 from dotenv import load_dotenv
+from sqlalchemy.engine import URL
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from alembic import context
@@ -56,11 +57,15 @@ def migration_url() -> str:
     """
     host = os.getenv("ALEMBIC_DB_HOST") or db_config.host
     port = os.getenv("ALEMBIC_DB_PORT") or db_config.port
-    return (
-        f"{db_config.database_engine}+{db_config.database_driver}://"
-        f"{db_config.username}:{db_config.password}@{host}:{port}"
-        f"/{db_config.database_name}"
+    url = URL.create(
+        drivername=f"{db_config.database_engine}+{db_config.database_driver}",
+        username=db_config.username,
+        password=db_config.password,
+        host=host,
+        port=int(port),
+        database=db_config.database_name,
     )
+    return url.render_as_string(hide_password=False)
 
 
 def _skip_empty_revision(context_, _revision, directives) -> None:

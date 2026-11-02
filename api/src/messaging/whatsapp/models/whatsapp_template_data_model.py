@@ -6,11 +6,16 @@ from sqlalchemy import Enum, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from messaging.whatsapp.enums.whatsapp_enums import WhatsAppTemplateCategory
 
 
-class WhatsAppTemplateDataModel(BaseModel):
+class WhatsAppTemplateDataModel(
+    IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     """Extensión 1:1 de `plantillas` (TemplateModel) para el canal WHATSAPP.
 
     No es un espejo de la plantilla: el contenido real (componentes, variables) vive en

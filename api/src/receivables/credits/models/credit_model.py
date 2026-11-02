@@ -18,7 +18,10 @@ from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from receivables.credits.enums.credit_enums import CreditTypes
 
 
@@ -33,7 +36,7 @@ def _enum_values(enum_cls: type[StrEnum]) -> list[str]:
     return [m.value for m in enum_cls]
 
 
-class CreditModel(BaseModel):
+class CreditModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     __tablename__ = "creditos"
 
     __table_args__ = (

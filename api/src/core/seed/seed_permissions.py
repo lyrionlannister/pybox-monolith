@@ -1,6 +1,6 @@
 """Crea o actualiza el catálogo de permisos base y sus asignaciones por rol."""
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.security.constants.permissions import (
@@ -47,7 +47,7 @@ async def seed_permissions(session: AsyncSession) -> None:
             await session.execute(
                 update(PermissionModel)
                 .where(PermissionModel.name == name)
-                .values(label=label)
+                .values(label=label, updated_at=func.now())
             )
     if new_permissions:
         session.add_all(new_permissions)

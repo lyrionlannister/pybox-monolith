@@ -7,11 +7,16 @@ from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from identity.users.enums.user_enums import PermissionEffect, UserScope
 
 
-class PermissionAssignmentModel(BaseModel):
+class PermissionAssignmentModel(
+    IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     __tablename__ = "permisos_asignados"
     __table_args__ = (
         # Único parcial (solo entre asignaciones vivas): con soft-delete, un permiso

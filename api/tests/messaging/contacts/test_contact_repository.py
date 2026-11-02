@@ -152,6 +152,31 @@ class TestGetSendStatusCounts:
         assert counts[str(ContactStatus.SENT)] == 1
 
 
+class TestMarkFailedIfSentBulk:
+    async def test_sets_updated_at(self, db_session):
+        repo = ContactRepository(db_session)
+        contact = make_contact(status=ContactStatus.SENT)
+        db_session.add(contact)
+        await db_session.flush()
+
+        await repo.mark_failed_if_sent_bulk([contact.id])
+        await db_session.refresh(contact)
+
+        assert contact.status == ContactStatus.FAILED
+        assert contact.updated_at is not None
+
+    async def test_skips_contacts_not_in_sent_status(self, db_session):
+        repo = ContactRepository(db_session)
+        contact = make_contact(status=ContactStatus.DELIVERED)
+        db_session.add(contact)
+        await db_session.flush()
+
+        await repo.mark_failed_if_sent_bulk([contact.id])
+        await db_session.refresh(contact)
+
+        assert contact.status == ContactStatus.DELIVERED
+
+
 class TestGetLatestByRecipientAndOrg:
     async def test_returns_the_most_recently_created_contact(self, db_session):
         org = build_organization()

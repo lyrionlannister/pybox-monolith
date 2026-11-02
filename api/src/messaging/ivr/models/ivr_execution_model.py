@@ -7,11 +7,17 @@ from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.tenant_mixin import TenantMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from messaging.ivr.enums.ivr_enums import IvrExecutionStatus
 
 
-class IvrExecutionModel(BaseModel):
+class IvrExecutionModel(
+    TenantMixin, IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     """Un bulk de llamadas despachado a Helena.
 
     Una campaña puede generar varias filas: cada disparo del cron es un bulk
@@ -42,14 +48,6 @@ class IvrExecutionModel(BaseModel):
         ForeignKey("programacion_campanias.id", ondelete="SET NULL"),
         nullable=True,
         name="id_programacion",
-    )
-
-    organization_id: Mapped[uuid.UUID] = mapped_column(
-        PgUUID(as_uuid=True),
-        ForeignKey("entidades.id"),
-        nullable=False,
-        index=True,
-        name="id_organizacion",
     )
 
     status: Mapped[IvrExecutionStatus] = mapped_column(

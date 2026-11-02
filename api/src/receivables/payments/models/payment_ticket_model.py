@@ -7,10 +7,13 @@ from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class PaymentTicketModel(BaseModel):
+class PaymentTicketModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     """Tabla intermedia que vincula un ticket de soporte con el pago y el crédito
     sobre el que actúa (solicitudes de autogestión del titular desde el calendario:
     "Reprogramación de pago" y "Validación de pago").

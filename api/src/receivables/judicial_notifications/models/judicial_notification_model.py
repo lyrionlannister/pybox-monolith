@@ -8,13 +8,18 @@ from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from receivables.judicial_notifications.enums.judicial_notification_enums import (
     JudicialPriority,
 )
 
 
-class JudicialNotificationModel(BaseModel):
+class JudicialNotificationModel(
+    IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     """Notificación judicial que una entidad emite sobre un crédito concreto.
 
     Cuelga del crédito y no del deudor: la entidad acreedora, el tipo de crédito y

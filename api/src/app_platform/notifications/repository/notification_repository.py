@@ -41,6 +41,6 @@ class NotificationRepository(SoftDeleteRepositoryBase[NotificationModel]):
                 NotificationModel.user_id == user_id,
                 NotificationModel.is_read.is_(False),
             )
-            .values(is_read=True)
+            .values(**self._touch(is_read=True))
         )
         await self.session.flush()

@@ -8,10 +8,13 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app_platform.support.enums.support_enums import SupportTicketEventType
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class SupportTicketEventModel(BaseModel):
+class SupportTicketEventModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     __tablename__ = "soporte_eventos"
 
     ticket_id: Mapped[uuid.UUID] = mapped_column(

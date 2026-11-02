@@ -6,10 +6,15 @@ from sqlalchemy import Boolean, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class SupportTicketMessageModel(BaseModel):
+class SupportTicketMessageModel(
+    IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     __tablename__ = "soporte_mensajes"
 
     ticket_id: Mapped[uuid.UUID] = mapped_column(

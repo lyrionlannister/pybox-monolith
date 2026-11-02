@@ -107,7 +107,7 @@ class JudicialNotificationRepository(
                 JudicialNotificationModel.deleted_at.is_(None),
                 JudicialNotificationModel.is_read.is_(False),
             )
-            .values(is_read=True)
+            .values(**self._touch(is_read=True))
         )
         await self.session.flush()
 

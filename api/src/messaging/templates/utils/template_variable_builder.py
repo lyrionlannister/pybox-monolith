@@ -2,7 +2,7 @@
 
 from messaging.templates.schemas.template_schemas import TemplateVariableOption
 
-# Nombres reales de columna definidos en core.base.audit_model.AuditModel
+# Nombres reales de columna: core.base.{created_at,updated_at,soft_delete}_mixin
 _AUDIT_FIELD_NAMES = {"fecha_creacion", "fecha_actualizacion", "eliminado_en"}
 
 _EXAMPLES_BY_KEYWORD: tuple[tuple[str, str], ...] = (

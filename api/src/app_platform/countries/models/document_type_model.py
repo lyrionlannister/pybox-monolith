@@ -3,10 +3,12 @@
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import AuditModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class DocumentTypeModel(AuditModel):
+class DocumentTypeModel(CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     """Catálogo de códigos de documento (persona + organización). Un código es
     único: el alcance (persona / fiscal / mercantil) y a qué país aplica se define
     en `paises_tipos_documento`, porque un mismo código (NIT, RFC, CUIT…) puede

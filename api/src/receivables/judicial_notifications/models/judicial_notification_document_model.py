@@ -6,10 +6,15 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class JudicialNotificationDocumentModel(BaseModel):
+class JudicialNotificationDocumentModel(
+    IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     """Adjunto de una notificación judicial.
 
     Tabla de unión por relación, misma solución que `documentos_deudor`: reemplaza

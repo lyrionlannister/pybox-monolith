@@ -3,10 +3,12 @@
 from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import AuditModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class CountryModel(AuditModel):
+class CountryModel(CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     """Fuente de verdad de los países soportados. Reemplaza al enum `Nationality`
     y a los diccionarios derivados (nombre, prefijo, zona horaria, moneda) como
     autoridad: agregar un país es un INSERT, no un cambio de código."""

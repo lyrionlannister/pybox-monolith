@@ -7,10 +7,16 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.tenant_mixin import TenantMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class ReportModel(BaseModel):
+class ReportModel(
+    TenantMixin, IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     __tablename__ = "reportes"
 
     name: Mapped[str] = mapped_column(String, nullable=False, name="nombre")
@@ -19,13 +25,6 @@ class ReportModel(BaseModel):
     )
     report_config: Mapped[dict] = mapped_column(
         JSONB, nullable=False, name="configuracion_reporte"
-    )
-    organization_id: Mapped[uuid.UUID] = mapped_column(
-        PgUUID(as_uuid=True),
-        ForeignKey("entidades.id"),
-        nullable=False,
-        index=True,
-        name="id_organizacion",
     )
     entity_id: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True),

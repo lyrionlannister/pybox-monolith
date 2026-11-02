@@ -9,10 +9,15 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from billing.invoices.enums.invoice_enums import PaymentAttemptStatus, PaymentProvider
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class InvoicePaymentAttemptModel(BaseModel):
+class InvoicePaymentAttemptModel(
+    IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     __tablename__ = "intentos_pago_factura"
 
     invoice_id: Mapped[uuid.UUID] = mapped_column(

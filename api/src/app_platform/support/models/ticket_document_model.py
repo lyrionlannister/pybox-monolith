@@ -8,10 +8,13 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app_platform.support.enums.support_enums import TicketDocumentCategory
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class TicketDocumentModel(BaseModel):
+class TicketDocumentModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     """Adjunto de un ticket de soporte (del reporte o de la evidencia de cierre).
 
     Tabla de unión por relación, misma solución que `documentos_deudor`: reemplaza

@@ -1,19 +1,17 @@
 """Credenciales de la cuenta propia de una organización en una pasarela de cobro."""
 
-import uuid
-
-from sqlalchemy import ForeignKey, Index, text
+from sqlalchemy import Index, text
 from sqlalchemy.dialects.postgresql import ENUM
-from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.base.encrypted_credential_model import EncryptedCredentialModel
+from core.base.tenant_mixin import TenantMixin
 from receivables.payment_gateways.enums.payment_gateway_enums import (
     ReceivablesGatewayProvider,
 )
 
 
-class OrganizationGatewayCredentialModel(EncryptedCredentialModel):
+class OrganizationGatewayCredentialModel(TenantMixin, EncryptedCredentialModel):
     """Credenciales de la cuenta PROPIA de una organización en una pasarela de pago,
     usadas para cobrarle a SUS deudores (la plataforma nunca las recibe ni dispersa).
 
@@ -37,13 +35,6 @@ class OrganizationGatewayCredentialModel(EncryptedCredentialModel):
         ),
     )
 
-    organization_id: Mapped[uuid.UUID] = mapped_column(
-        PgUUID(as_uuid=True),
-        ForeignKey("entidades.id"),
-        nullable=False,
-        index=True,
-        name="id_organizacion",
-    )
     provider: Mapped[ReceivablesGatewayProvider] = mapped_column(
         ENUM(
             ReceivablesGatewayProvider,

@@ -9,7 +9,10 @@ from sqlalchemy.dialects.postgresql import ENUM, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from receivables.payment_gateways.enums.payment_gateway_enums import (
     ChargeMode,
     ReceivablesGatewayProvider,
@@ -17,7 +20,9 @@ from receivables.payment_gateways.enums.payment_gateway_enums import (
 )
 
 
-class CreditPaymentAttemptModel(BaseModel):
+class CreditPaymentAttemptModel(
+    IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     """Clon de `billing.invoices.models.InvoicePaymentAttemptModel`, pero para el
     cobro de cuotas de cartera (`PaymentModel`, deudor -> empresa) vía la pasarela
     propia de la organización. Los intentos nunca se sobrescriben; siempre se crea

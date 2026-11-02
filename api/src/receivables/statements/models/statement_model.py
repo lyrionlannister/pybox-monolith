@@ -7,16 +7,26 @@ from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.tenant_mixin import TenantMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class StatementModel(BaseModel):
+class StatementModel(
+    TenantMixin, IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     """Registro de un extracto generado para un deudor.
 
     Los bytes del PDF viven en `documentos` (vía DocumentService); acá solo se guarda
     de qué se generó el extracto, para poder listarlo sin depender de la categoría del
     documento. `credit_id` nulo significa extracto consolidado (todos los créditos
     activos del deudor en ese portafolio); con valor, extracto de un crédito puntual.
+
+    `organization_id` (de `TenantMixin`) está denormalizado desde el portafolio: aísla
+    por organización sin tener que resolverlo en cada consulta, mismo criterio que
+    `DocumentModel.organization_id`.
     """
 
     __tablename__ = "extractos"
@@ -34,15 +44,6 @@ class StatementModel(BaseModel):
         nullable=False,
         index=True,
         name="id_portafolio",
-    )
-    # Denormalizado desde el portafolio: aísla por organización sin tener que resolver
-    # el portafolio en cada consulta, mismo criterio que DocumentModel.organization_id.
-    organization_id: Mapped[uuid.UUID] = mapped_column(
-        PgUUID(as_uuid=True),
-        ForeignKey("entidades.id"),
-        nullable=False,
-        index=True,
-        name="id_organizacion",
     )
     credit_id: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True),

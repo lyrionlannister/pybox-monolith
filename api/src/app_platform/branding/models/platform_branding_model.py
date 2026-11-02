@@ -6,10 +6,13 @@ from sqlalchemy import CheckConstraint, ForeignKey, SmallInteger
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class PlatformBrandingModel(BaseModel):
+class PlatformBrandingModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     """Fila única de configuración de marca de toda la plataforma (hoy solo el logo
     que se muestra a los usuarios sin organización). `singleton_key` + su CHECK
     garantizan la fila única a nivel de base de datos -- no "el service se encarga de

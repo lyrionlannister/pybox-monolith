@@ -5,11 +5,14 @@ from decimal import Decimal
 from sqlalchemy import Enum, Index, Numeric, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from messaging.channels.enums.channel_enums import ChannelName, Currency
 
 
-class ChannelModel(BaseModel):
+class ChannelModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     __tablename__ = "canales"
     __table_args__ = (
         # Único parcial (solo entre canales vivos): con soft-delete, un canal borrado

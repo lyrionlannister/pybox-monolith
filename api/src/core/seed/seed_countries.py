@@ -1,6 +1,6 @@
 """Crea o actualiza el catálogo de países soportados y sus tipos de documento."""
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app_platform.countries.enums.country_enums import (
@@ -90,7 +90,7 @@ async def seed_countries(session: AsyncSession) -> None:
             await session.execute(
                 update(DocumentTypeModel)
                 .where(DocumentTypeModel.code == code)
-                .values(label=label)
+                .values(label=label, updated_at=func.now())
             )
 
     await session.flush()
