@@ -268,7 +268,7 @@ class ContactRepository(SoftDeleteRepositoryBase[ContactModel]):
                 ContactModel.id.in_(contact_ids),
                 ContactModel.status == ContactStatus.SENT,
             )
-            .values(status=ContactStatus.FAILED)
+            .values(**self._touch(status=ContactStatus.FAILED))
         )
 
     async def get_send_status_counts(

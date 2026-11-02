@@ -7,7 +7,10 @@ from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from identity.auth.enums.auth_enums import AuthProvider
 from identity.organizations.models.organization_membership_model import (
     OrganizationMembershipModel,
@@ -15,7 +18,7 @@ from identity.organizations.models.organization_membership_model import (
 from identity.users.enums.user_enums import IdentityVerificationStatus
 
 
-class UserModel(BaseModel):
+class UserModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     __tablename__ = "usuarios"
     __table_args__ = (
         UniqueConstraint(

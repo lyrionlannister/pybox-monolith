@@ -8,11 +8,14 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from messaging.ivr.enums.ivr_enums import IvrCallStatus
 
 
-class IvrInteractionModel(BaseModel):
+class IvrInteractionModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     """Una interacción (llamada) reportada por Helena.
 
     Con remarcación activa hay varias interacciones por destinatario, agrupadas

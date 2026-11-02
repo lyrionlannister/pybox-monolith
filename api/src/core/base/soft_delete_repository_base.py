@@ -1,9 +1,9 @@
 """Repository base para modelos con borrado lógico (`deleted_at`)."""
 
 from datetime import datetime, timezone
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 
 from core.base.repository_base import RepositoryBase, T
 
@@ -14,6 +14,16 @@ class SoftDeleteRepositoryBase(RepositoryBase[T]):
     get_by_id / get_all exclude deleted records by default.
     Use the _including_deleted variants when admin access is needed.
     """
+
+    @staticmethod
+    def _touch(**values: Any) -> dict[str, Any]:
+        """Agrega `updated_at` a los valores de un UPDATE masivo.
+
+        Un UPDATE armado con `update()` de SQLAlchemy Core no pasa por el ORM,
+        así que el `onupdate` de la columna (que solo dispara en flush) nunca
+        se ejecuta -- hay que setear `updated_at` a mano en cada uno.
+        """
+        return {**values, "updated_at": func.now()}
 
     async def get_by_id(self, id: object) -> Optional[T]:
         instance = await self.session.get(self.model_class, id)
@@ -54,7 +64,7 @@ class SoftDeleteRepositoryBase(RepositoryBase[T]):
         await self.session.execute(
             update(self.model_class)
             .where(self.model_class.id.in_(ids))
-            .values(deleted_at=datetime.now(timezone.utc))  # type: ignore[attr-defined]
+            .values(**self._touch(deleted_at=datetime.now(timezone.utc)))  # type: ignore[attr-defined]
         )
         await self.session.flush()
 
@@ -66,7 +76,7 @@ class SoftDeleteRepositoryBase(RepositoryBase[T]):
         await self.session.execute(
             update(self.model_class)
             .where(self.model_class.id.in_(ids))
-            .values(deleted_at=None)  # type: ignore[attr-defined]
+            .values(**self._touch(deleted_at=None))  # type: ignore[attr-defined]
         )
         await self.session.flush()
 
@@ -83,7 +93,7 @@ class SoftDeleteRepositoryBase(RepositoryBase[T]):
                 self.model_class.deleted_at.is_(None),  # type: ignore[union-attr]
                 *conditions,
             )
-            .values(deleted_at=deleted_at)
+            .values(**self._touch(deleted_at=deleted_at))
         )
         await self.session.flush()
 
@@ -96,7 +106,7 @@ class SoftDeleteRepositoryBase(RepositoryBase[T]):
                 self.model_class.deleted_at == deleted_at,  # type: ignore[union-attr]
                 *conditions,
             )
-            .values(deleted_at=None)
+            .values(**self._touch(deleted_at=None))
         )
         await self.session.flush()
 

@@ -74,7 +74,7 @@ class OrganizationGatewayCredentialRepository(
         )
         if exclude_id is not None:
             stmt = stmt.where(OrganizationGatewayCredentialModel.id != exclude_id)
-        await self.session.execute(stmt.values(is_active=False))
+        await self.session.execute(stmt.values(**self._touch(is_active=False)))
 
     async def get_by_lookup_key(
         self, provider: ReceivablesGatewayProvider, lookup_key: str

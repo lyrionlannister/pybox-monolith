@@ -13,10 +13,13 @@ from app_platform.support.enums.support_enums import (
     SupportTicketPriority,
     SupportTicketStatus,
 )
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class SupportTicketModel(BaseModel):
+class SupportTicketModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     __tablename__ = "soporte_tickets"
 
     ticket_number: Mapped[int] = mapped_column(

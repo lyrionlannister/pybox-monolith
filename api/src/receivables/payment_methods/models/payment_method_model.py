@@ -1,26 +1,22 @@
 """Método de pago manual configurado por una organización."""
 
-import uuid
-
-from sqlalchemy import Boolean, ForeignKey, String, Text
+from sqlalchemy import Boolean, String, Text
 from sqlalchemy.dialects.postgresql import ENUM
-from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.tenant_mixin import TenantMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from receivables.payment_methods.enums.payment_method_enums import PaymentMethodType
 
 
-class PaymentMethodModel(BaseModel):
+class PaymentMethodModel(
+    TenantMixin, IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     __tablename__ = "metodos_pago"
 
-    organization_id: Mapped[uuid.UUID] = mapped_column(
-        PgUUID(as_uuid=True),
-        ForeignKey("entidades.id"),
-        nullable=False,
-        index=True,
-        name="id_organizacion",
-    )
     name: Mapped[str] = mapped_column(String(160), nullable=False, name="nombre")
     type: Mapped[PaymentMethodType] = mapped_column(
         ENUM(

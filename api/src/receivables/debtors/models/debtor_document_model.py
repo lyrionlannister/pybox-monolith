@@ -7,11 +7,14 @@ from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from receivables.debtors.enums.debtor_document_enums import DebtorDocumentCategory
 
 
-class DebtorDocumentModel(BaseModel):
+class DebtorDocumentModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     """Documento del repositorio documental de un deudor.
 
     Tabla de unión por relación (solución (c) del catálogo de asociaciones

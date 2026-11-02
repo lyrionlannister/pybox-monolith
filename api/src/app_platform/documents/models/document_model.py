@@ -6,10 +6,13 @@ from sqlalchemy import BigInteger, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class DocumentModel(BaseModel):
+class DocumentModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     """Metadatos de un archivo guardado en el almacén de objetos.
 
     Los bytes viven en el almacén; acá vive solo lo que describe al ARCHIVO.

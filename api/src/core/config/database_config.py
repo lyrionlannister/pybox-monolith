@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from dotenv import load_dotenv
+from sqlalchemy.engine import URL
 
 from core.tools.config_tools import get_or_throw
 
@@ -18,9 +19,15 @@ class DatabaseConfig:
     database_name: str = get_or_throw("DB_NAME")
     database_engine: str = get_or_throw("DB_ENGINE")
     database_driver: str = get_or_throw("DB_DRIVER")
-    url_connection: str = (
-        f"{database_engine}+{database_driver}://{username}:{password}"
-        f"@{host}:{port}/{database_name}"
+    # `URL.create()` en vez de un f-string: escapa usuario/contraseña con caracteres
+    # especiales (@, :, /), que romperían un string crudo armado a mano.
+    url_connection: URL = URL.create(
+        drivername=f"{database_engine}+{database_driver}",
+        username=username,
+        password=password,
+        host=host,
+        port=port,
+        database=database_name,
     )
 
 

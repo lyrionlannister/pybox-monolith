@@ -1,17 +1,20 @@
 """Deudor de un crédito, propio de una organización."""
 
-import uuid
-
 from sqlalchemy import ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ENUM
-from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.tenant_mixin import TenantMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from receivables.debtors.enums.debtor_enums import DebtorType
 
 
-class DebtorModel(BaseModel):
+class DebtorModel(
+    TenantMixin, IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     __tablename__ = "deudores"
     __table_args__ = (
         # El deudor es de UNA empresa: el mismo documento puede existir en varias
@@ -25,13 +28,6 @@ class DebtorModel(BaseModel):
         ),
     )
 
-    organization_id: Mapped[uuid.UUID] = mapped_column(
-        PgUUID(as_uuid=True),
-        ForeignKey("entidades.id"),
-        nullable=False,
-        index=True,
-        name="id_organizacion",
-    )
     full_name: Mapped[str] = mapped_column(
         String, nullable=False, name="nombre_completo"
     )

@@ -1,6 +1,6 @@
 """Crea o actualiza los canales de mensajería base (SMS, email, IVR, WhatsApp)."""
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from messaging.channels.enums.channel_enums import ChannelName, Currency
@@ -59,7 +59,7 @@ async def seed_channels(session: AsyncSession) -> None:
             await session.execute(
                 update(ChannelModel)
                 .where(ChannelModel.name == name)
-                .values(label=label)
+                .values(label=label, updated_at=func.now())
             )
     if new_channels:
         session.add_all(new_channels)

@@ -7,10 +7,12 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, SmallIntege
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import AuditModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class ChatMemberModel(AuditModel):
+class ChatMemberModel(CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     __tablename__ = "chat_members"
     __table_args__ = (
         # `user_id` es la columna no-líder de la PK compuesta: sin este índice,

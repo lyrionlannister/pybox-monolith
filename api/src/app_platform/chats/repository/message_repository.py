@@ -80,7 +80,7 @@ class MessageRepository(SoftDeleteRepositoryBase[MessageModel]):
                 MessageStatusModel.message_id == message_id,
                 MessageStatusModel.user_id == user_id,
             )
-            .values(read_at=now)
+            .values(**self._touch(read_at=now))
         )
         await self.session.flush()
 
@@ -95,7 +95,7 @@ class MessageRepository(SoftDeleteRepositoryBase[MessageModel]):
                 MessageStatusModel.message_id.in_(message_ids),
                 MessageStatusModel.user_id == user_id,
             )
-            .values(read_at=now)
+            .values(**self._touch(read_at=now))
         )
         await self.session.flush()
 

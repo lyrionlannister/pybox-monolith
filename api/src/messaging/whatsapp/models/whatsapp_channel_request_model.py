@@ -7,11 +7,17 @@ from sqlalchemy import DateTime, Enum, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.tenant_mixin import TenantMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from messaging.whatsapp.enums.whatsapp_enums import ChannelRequestStatus
 
 
-class WhatsAppChannelRequestModel(BaseModel):
+class WhatsAppChannelRequestModel(
+    TenantMixin, IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     """Gate de consentimiento: un caso por (organización, teléfono) que debe aprobarse
     antes de que proceda el primer envío de WhatsApp a ese teléfono.
     """
@@ -23,14 +29,6 @@ class WhatsAppChannelRequestModel(BaseModel):
             "telefono",
             name="uq_solicitud_canal_whatsapp_org_telefono",
         ),
-    )
-
-    organization_id: Mapped[uuid.UUID] = mapped_column(
-        PgUUID(as_uuid=True),
-        ForeignKey("entidades.id"),
-        nullable=False,
-        index=True,
-        name="id_organizacion",
     )
 
     phone: Mapped[str] = mapped_column(

@@ -102,9 +102,11 @@ class IvrInteractionRepository(SoftDeleteRepositoryBase[IvrInteractionModel]):
             update(IvrInteractionModel)
             .where(IvrInteractionModel.id.in_(ids))
             .values(
-                status=IvrCallStatus.FAILED,
-                ended_at=func.coalesce(IvrInteractionModel.ended_at, ended_at),
-                last_event=last_event,
+                **self._touch(
+                    status=IvrCallStatus.FAILED,
+                    ended_at=func.coalesce(IvrInteractionModel.ended_at, ended_at),
+                    last_event=last_event,
+                )
             )
         )
 

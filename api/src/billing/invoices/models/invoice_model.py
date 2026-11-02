@@ -1,21 +1,25 @@
 """Factura mensual de una organización, con sus items y sus intentos de pago."""
 
-import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, UniqueConstraint
+from sqlalchemy import DateTime, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ENUM
-from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from billing.invoices.enums.invoice_enums import InvoiceStatus
 from billing.invoices.models.invoice_item_model import InvoiceItemModel
 from billing.invoices.models.payment_attempt_model import InvoicePaymentAttemptModel
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.tenant_mixin import TenantMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class InvoiceModel(BaseModel):
+class InvoiceModel(
+    TenantMixin, IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     __tablename__ = "facturas"
     __table_args__ = (
         UniqueConstraint(
@@ -26,13 +30,6 @@ class InvoiceModel(BaseModel):
         ),
     )
 
-    organization_id: Mapped[uuid.UUID] = mapped_column(
-        PgUUID(as_uuid=True),
-        ForeignKey("entidades.id"),
-        nullable=False,
-        index=True,
-        name="id_organizacion",
-    )
     period_year: Mapped[int] = mapped_column(
         Integer, nullable=False, name="anio_periodo"
     )

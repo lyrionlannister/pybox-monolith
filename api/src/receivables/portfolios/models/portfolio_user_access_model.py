@@ -7,10 +7,16 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, Index, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.tenant_mixin import TenantMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class PortfolioUserAccessModel(BaseModel):
+class PortfolioUserAccessModel(
+    TenantMixin, IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     __tablename__ = "accesos_usuario_portafolio"
     __table_args__ = (
         UniqueConstraint(
@@ -26,13 +32,6 @@ class PortfolioUserAccessModel(BaseModel):
         nullable=False,
         index=True,
         name="id_usuario",
-    )
-    organization_id: Mapped[uuid.UUID] = mapped_column(
-        PgUUID(as_uuid=True),
-        ForeignKey("entidades.id"),
-        nullable=False,
-        index=True,
-        name="id_organizacion",
     )
     portfolio_id: Mapped[uuid.UUID] = mapped_column(
         PgUUID(as_uuid=True),

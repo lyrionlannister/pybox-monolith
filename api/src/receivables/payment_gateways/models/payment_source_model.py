@@ -8,7 +8,10 @@ from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from receivables.payment_gateways.enums.payment_gateway_enums import (
     PaymentSourceStatus,
     PaymentSourceType,
@@ -16,7 +19,9 @@ from receivables.payment_gateways.enums.payment_gateway_enums import (
 )
 
 
-class DebtorPaymentSourceModel(BaseModel):
+class DebtorPaymentSourceModel(
+    IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     """Medio de pago tokenizado y reutilizable de UN deudor, guardado para que la
     organización dueña de su crédito pueda cobrarle cuotas futuras sin que reingrese
     los datos (ver skill `wompi-gateway`, Paso 5). El deudor ya es de una sola

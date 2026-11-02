@@ -7,11 +7,14 @@ from sqlalchemy import DateTime, ForeignKey, Index, String, func
 from sqlalchemy.dialects.postgresql import ENUM, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from identity.auth.enums.notification_enums import VerificationChannel
 
 
-class VerificationCodeModel(BaseModel):
+class VerificationCodeModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     __tablename__ = "codigos_verificacion"
     __table_args__ = (
         Index(

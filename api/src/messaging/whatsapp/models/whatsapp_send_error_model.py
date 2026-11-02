@@ -9,10 +9,13 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class WhatsAppSendErrorModel(BaseModel):
+class WhatsAppSendErrorModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     # pylint: disable=line-too-long
     """Errores de envío reportados por Meta vía webhook (entry.changes.value.errors y/o
     statuses[].errors[]).

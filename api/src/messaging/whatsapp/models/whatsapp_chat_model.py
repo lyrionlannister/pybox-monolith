@@ -7,10 +7,16 @@ from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.tenant_mixin import TenantMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class WhatsAppChatModel(BaseModel):
+class WhatsAppChatModel(
+    TenantMixin, IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     """Hilo de conversación de WhatsApp, uno por número de teléfono dentro de una
     organización (la organización se resuelve sin ambigüedad por el phone_number_id
     receptor, ver whatsapp_webhook_service).
@@ -21,14 +27,6 @@ class WhatsAppChatModel(BaseModel):
         UniqueConstraint(
             "id_organizacion", "telefono", name="uq_whatsapp_chats_org_telefono"
         ),
-    )
-
-    organization_id: Mapped[uuid.UUID] = mapped_column(
-        PgUUID(as_uuid=True),
-        ForeignKey("entidades.id"),
-        nullable=False,
-        index=True,
-        name="id_organizacion",
     )
 
     # Portafolio y campaña del ContactModel más reciente que le escribió a

@@ -7,10 +7,12 @@ from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import AuditModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class MessageStatusModel(AuditModel):
+class MessageStatusModel(CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     __tablename__ = "estados_mensaje"
 
     message_id: Mapped[uuid.UUID] = mapped_column(

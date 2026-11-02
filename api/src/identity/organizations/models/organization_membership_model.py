@@ -6,10 +6,15 @@ from sqlalchemy import Boolean, ForeignKey, Index, text
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 
 
-class OrganizationMembershipModel(BaseModel):
+class OrganizationMembershipModel(
+    IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin
+):
     __tablename__ = "membresias_organizacion"
     __table_args__ = (
         # Único parcial (solo entre membresías vivas): con soft-delete, una membresía

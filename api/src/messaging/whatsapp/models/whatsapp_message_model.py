@@ -9,14 +9,17 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from messaging.whatsapp.enums.whatsapp_enums import (
     MessageDirection,
     WhatsAppMessageType,
 )
 
 
-class WhatsAppMessageModel(BaseModel):
+class WhatsAppMessageModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     """Mensajes del hilo `whatsapp_chats` — entrantes (respuestas del deudor) y
     salientes conversacionales. Los envíos masivos de campaña ya viven en `contactos`
     y no se duplican aquí.

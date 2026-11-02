@@ -6,11 +6,14 @@ from sqlalchemy import Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.base.audit_model import BaseModel
+from core.base.created_at_mixin import CreatedAtMixin
+from core.base.id_mixin import IdMixin
+from core.base.soft_delete_mixin import SoftDeleteMixin
+from core.base.updated_at_mixin import UpdatedAtMixin
 from messaging.templates.enums.template_enums import TemplateChannel, TemplateStatus
 
 
-class TemplateModel(BaseModel):
+class TemplateModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteMixin):
     __tablename__ = "plantillas"
 
     portfolio_id: Mapped[uuid.UUID] = mapped_column(
