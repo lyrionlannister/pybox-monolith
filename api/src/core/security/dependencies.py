@@ -1,5 +1,6 @@
 """Dependencias de FastAPI para resolver la sesión (cookie/SSE/WebSocket) y el MFA."""
 
+import time
 import uuid
 from typing import Annotated
 
@@ -11,6 +12,7 @@ from core.database.redis import redis_client
 from core.security.constants.cookie_constants import ACCESS_TOKEN_COOKIE
 from core.security.services.auth_token_service import AuthTokenService
 from core.security.utils.service_key_verifier import verify_n8n_service_key
+from core.tools.config_tools import get_or_throw
 from identity.auth.dependencies import TokenPayload
 from identity.users.schemas.user_session_schema import (
     UserSession,
@@ -109,7 +111,24 @@ async def get_sse_session(request: Request) -> UserSession:
     return await _require_mfa_verified(session)
 
 
+WS_SESSION_RECHECK_SECONDS = 60
+
+
+def _allowed_ws_origins() -> set[str]:
+    return {o.strip() for o in get_or_throw("CORS_ORIGINS").split(",") if o.strip()}
+
+
 async def get_ws_session(websocket: WebSocket) -> UserSession:
+    """Autentica un WebSocket por la cookie de acceso.
+
+    Los WebSockets no pasan por CORS: sin validar `Origin`, una página de otro
+    origen (p. ej. un subdominio hermano) podría abrir el socket con la cookie de
+    la víctima. Un cliente sin `Origin` no es un navegador y no corre ese riesgo."""
+    origin = websocket.headers.get("origin")
+    if origin is not None and origin not in _allowed_ws_origins():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Origen no permitido."
+        )
     resolved_token = _resolve_stream_token(websocket)
     try:
         payload = _sse_token_service.verify_token(resolved_token)
@@ -119,6 +138,24 @@ async def get_ws_session(websocket: WebSocket) -> UserSession:
         ) from e
     session = await _load_session(_subject_to_uuid(payload))
     return await _require_mfa_verified(session)
+
+
+class WsSessionGuard:
+    """Revalida periódicamente la sesión de un WebSocket abierto: sin esto, un
+    logout, una desactivación o la pérdida de acceso a la organización no cortaban
+    el socket ya conectado. Devuelve la sesión vigente (con permisos actualizados)
+    o lanza HTTPException si ya no es válida."""
+
+    def __init__(self, session: UserSession) -> None:
+        self.session = session
+        self._checked_at = time.monotonic()
+
+    async def current(self) -> UserSession:
+        if time.monotonic() - self._checked_at >= WS_SESSION_RECHECK_SECONDS:
+            refreshed = await _load_session(self.session.user_id)
+            self.session = await _require_mfa_verified(refreshed)
+            self._checked_at = time.monotonic()
+        return self.session
 
 
 async def require_n8n_service_key(

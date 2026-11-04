@@ -7,6 +7,8 @@ import io
 import polars as pl
 from fastapi import HTTPException, UploadFile, status
 
+from app_platform.documents.utils.upload_limits import read_within_limit
+
 _MAX_BYTES = 10 * 1024 * 1024  # 10 MB
 _MAX_ROWS = 10_000
 _REQUIRED_COLS = {"tipo_documento", "documento", "destinatario"}
@@ -18,12 +20,7 @@ _XLSX_MIMES = {
 
 
 async def parse_file(file: UploadFile) -> list[dict[str, str]]:
-    content = await file.read()
-    if len(content) > _MAX_BYTES:
-        raise HTTPException(
-            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            "Archivo supera el límite de 10 MB",
-        )
+    content = await read_within_limit(file, _MAX_BYTES)
 
     filename = (file.filename or "").lower()
     mime = (file.content_type or "").lower()

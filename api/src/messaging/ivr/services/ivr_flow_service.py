@@ -14,6 +14,9 @@ from messaging.ivr.schemas.ivr_flow_schemas import (
     IvrFlowUpdateRequest,
 )
 from receivables.portfolios.repository.portfolio_repository import PortfolioRepository
+from receivables.portfolios.services.portfolio_user_access_service import (
+    PortfolioUserAccessService,
+)
 
 
 class IvrFlowService:
@@ -30,8 +33,20 @@ class IvrFlowService:
     ) -> uuid.UUID:
         portfolio = await self._portfolio_repo.get_by_id(portfolio_id)
         return await check_portfolio_org_access(
-            user_session, portfolio, PORTFOLIO_COMMUNICATIONS
+            user_session,
+            portfolio,
+            PORTFOLIO_COMMUNICATIONS,
+            check_access=PortfolioUserAccessService(
+                self._portfolio_repo.session
+            ).check_access,
         )
+
+    async def authorize_portfolio(
+        self, user_session: UserSession, portfolio_id: uuid.UUID
+    ) -> uuid.UUID:
+        """Mismo chequeo que el resto de operaciones de flujos (permiso de
+        comunicaciones + acceso al portafolio); devuelve la organización dueña."""
+        return await self._check_portfolio_access(user_session, portfolio_id)
 
     async def list_by_portfolio(
         self, portfolio_id: uuid.UUID, user_session: UserSession

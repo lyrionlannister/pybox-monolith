@@ -48,6 +48,9 @@ from receivables.debtors.schemas.debtor_schemas import (
 from receivables.debtors.services.debtor_document_service import DebtorDocumentService
 from receivables.payments.repository.payment_repository import PaymentRepository
 from receivables.portfolios.repository.portfolio_repository import PortfolioRepository
+from receivables.portfolios.services.portfolio_user_access_service import (
+    PortfolioUserAccessService,
+)
 
 
 class DebtorService:
@@ -372,7 +375,14 @@ class DebtorService:
         self, user_session: UserSession, portfolio_id: uuid.UUID
     ) -> None:
         portfolio = await self.portfolio_repo.get_by_id(portfolio_id)
-        await check_portfolio_org_access(user_session, portfolio, PORTFOLIO_CLIENTS)
+        await check_portfolio_org_access(
+            user_session,
+            portfolio,
+            PORTFOLIO_CLIENTS,
+            check_access=PortfolioUserAccessService(
+                self.portfolio_repo.session
+            ).check_access,
+        )
 
     async def _require_debtor(
         self, debtor_id: uuid.UUID, portfolio_id: uuid.UUID | None = None

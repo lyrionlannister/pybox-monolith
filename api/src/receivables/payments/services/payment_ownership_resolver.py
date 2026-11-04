@@ -5,7 +5,10 @@ import uuid
 from fastapi import HTTPException, status
 
 from app_platform.countries.enums.country_enums import UserDocumentType
-from core.security.policies.security_policies import get_self_identity
+from core.security.policies.security_policies import (
+    get_self_identity,
+    require_verified_identity,
+)
 from identity.users.schemas.user_session_schema import UserSession
 from receivables.credits.models.credit_model import CreditModel
 from receivables.credits.repository.credit_repository import CreditRepository
@@ -44,6 +47,7 @@ class PaymentOwnershipResolver:
         *,
         require_pending: bool = True,
     ) -> tuple[PaymentModel, CreditModel, PortfolioModel]:
+        require_verified_identity(session)
         doc_type_str, doc_number_hash = get_self_identity(session)
         try:
             doc_type = UserDocumentType(doc_type_str)

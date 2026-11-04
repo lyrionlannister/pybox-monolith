@@ -17,6 +17,7 @@ from core.security.constants.permissions import ORG_USERS
 from core.security.constants.role_permissions_catalog import get_base_permissions
 from core.security.services.auth_token_service import AuthTokenService
 from core.security.services.encrypt_service import encrypt_service
+from core.security.services.password_hasher_service import PasswordHasherService
 from identity.organizations.repository.organization_membership_repository import (
     OrganizationMembershipRepository,
 )
@@ -25,7 +26,12 @@ from identity.organizations.repository.organization_repository import (
 )
 from identity.organizations.services.organization_service import OrganizationService
 from identity.users.constants.tour_keys import TOUR_KEYS
-from identity.users.enums.user_enums import PermissionEffect, UserRole, UserScope
+from identity.users.enums.user_enums import (
+    IdentityVerificationStatus,
+    PermissionEffect,
+    UserRole,
+    UserScope,
+)
 from identity.users.models.role_assignment_model import RoleAssignmentModel
 from identity.users.models.user_model import UserModel
 from identity.users.repository.permission_assignment_repository import (
@@ -77,6 +83,10 @@ class UserService:
         self._redis = redis
         self._country_service = CountryService(CountryRepository(user_repo.session))
         self._document_service = DocumentService(user_repo.session)
+
+    @property
+    def _password_hasher(self) -> PasswordHasherService:
+        return PasswordHasherService()
 
     @property
     def redis(self) -> RedisClient:
@@ -412,6 +422,8 @@ class UserService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado."
             )
+        if user_id == session.user_id:
+            self._assert_self_sensitive_change_allowed(user, data)
         if data.firstname is not None:
             user.firstname = data.firstname
         if data.lastname is not None:
@@ -424,6 +436,9 @@ class UserService:
                     detail="Ya existe un usuario con ese correo electrónico.",
                 )
             user.email = data.email
+            if user_id == session.user_id:
+                # El correo nuevo no está verificado: el onboarding vuelve a pedirlo.
+                user.is_email_verified = False
         if data.phone_number is not None and data.phone_number != user.phone_number:
             existing = await self.user_repo.get_by_phone_number(data.phone_number)
             if existing is not None and existing.id != user.id:
@@ -438,26 +453,12 @@ class UserService:
             await self._country_service.require_valid_document(
                 data.document_type, DocumentScope.PERSON, country_code=user.nationality
             )
-            user.document_type = data.document_type
-        if data.document_number is not None:
-            if data.document_number == "":
-                user.document_number = None
-                user.document_number_hash = None
-            else:
-                new_hash = encrypt_service.hash_document(data.document_number)
-                if new_hash != user.document_number_hash:
-                    existing = await self.user_repo.get_by_document(
-                        user.document_type, new_hash
-                    )
-                    if existing is not None and existing.id != user.id:
-                        raise HTTPException(
-                            status_code=status.HTTP_409_CONFLICT,
-                            detail="Ya existe un usuario con ese número de documento.",
-                        )
-                user.document_number = encrypt_service.encrypt_to_str(
-                    data.document_number
-                )
-                user.document_number_hash = new_hash
+        document_changed = await self.apply_document_change(
+            user,
+            data.document_type,
+            data.document_number,
+            by_self=user_id == session.user_id,
+        )
         if data.mfa_enabled is not None:
             user.mfa_enabled = data.mfa_enabled
         await self.user_repo.update(user)
@@ -465,7 +466,97 @@ class UserService:
             # Correo, documento, MFA o estado cambian lo que la sesión cacheada afirma
             # (o si el usuario puede seguir entrando): se obliga a reconstruirla.
             await self._revoke_sessions(user_id)
+        elif document_changed:
+            await self.get_user_session(user_id)
         return await self.get_user_detail(session, user_id)
+
+    def _assert_self_sensitive_change_allowed(
+        self, user: UserModel, data: UpdateUserSchema
+    ) -> None:
+        """Cambios sobre la propia cuenta que permitirían conservarla con una sesión
+        robada: cambiar el correo (destino de la recuperación de contraseña) o
+        desactivar el MFA exigen la contraseña actual; desactivarse a uno mismo no
+        se permite desde aquí."""
+        if data.is_active is not None and data.is_active != user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No puedes cambiar el estado de tu propia cuenta.",
+            )
+        changes_email = data.email is not None and data.email != user.email
+        disables_mfa = data.mfa_enabled is False and bool(user.mfa_enabled)
+        if not (changes_email or disables_mfa):
+            return
+        stored_hash = user.hashed_password
+        if not stored_hash:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "Tu cuenta usa un proveedor externo: contacta a soporte para "
+                    "este cambio."
+                ),
+            )
+        if not data.current_password or not self._password_hasher.verify_password(
+            stored_hash, data.current_password
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Confirma tu contraseña actual para este cambio.",
+            )
+
+    async def apply_document_change(
+        self,
+        user: UserModel,
+        document_type: str | None,
+        document_number: str | None,
+        *,
+        by_self: bool,
+    ) -> bool:
+        """Aplica (sin persistir) un cambio del documento de identidad del usuario.
+
+        El par (tipo, hash) es lo que vincula a un titular SELF con sus filas de
+        deudor (`get_self_identity`), así que: es único entre usuarios; quien ya
+        envió su identidad a verificación (pendiente o aprobada) no puede cambiarlo
+        por sí mismo -- si no, bastaría con escribir el documento de otra persona
+        para heredar su verificación --; y cualquier cambio reinicia la
+        verificación. `None` deja el campo como está y `""` borra el número.
+        Devuelve si el documento cambió."""
+        new_type = document_type if document_type is not None else user.document_type
+        if document_number is None:
+            new_hash = user.document_number_hash
+        elif document_number == "":
+            new_hash = None
+        else:
+            new_hash = encrypt_service.hash_document(document_number)
+        if new_type == user.document_type and new_hash == user.document_number_hash:
+            return False
+        if by_self and user.identity_verification_status in (
+            IdentityVerificationStatus.PENDING,
+            IdentityVerificationStatus.APPROVED,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Tu identidad ya fue enviada a verificación: para cambiar el "
+                    "documento contacta a soporte."
+                ),
+            )
+        if new_type and new_hash:
+            existing = await self.user_repo.get_by_document(new_type, new_hash)
+            if existing is not None and existing.id != user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Ya existe un usuario con ese número de documento.",
+                )
+        user.document_type = new_type
+        if document_number is not None:
+            user.document_number = (
+                encrypt_service.encrypt_to_str(document_number)
+                if document_number
+                else None
+            )
+            user.document_number_hash = new_hash
+        user.identity_verification_status = IdentityVerificationStatus.NOT_SUBMITTED
+        return True
 
     async def update_profile_photo(
         self, user_id: uuid.UUID, file: UploadFile

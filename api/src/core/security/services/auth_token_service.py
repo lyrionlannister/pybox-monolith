@@ -17,6 +17,10 @@ class AuthTokenService:
     ACCESS_TOKEN_EXPIRE_MINUTES = 60
     REFRESH_TOKEN_EXPIRE_DAYS = 7
     ALGORITHM = "HS256"
+    # Claim `typ`: access y refresh comparten secreto y algoritmo, así que sin él un
+    # refresh token (7 días) también pasaría como access token.
+    ACCESS_TOKEN_TYPE = "access"
+    REFRESH_TOKEN_TYPE = "refresh"
 
     def __init__(self, secret_key: str | None = None, redis=None):
         self.secret_key = secret_key or get_or_throw("AUTH_TOKEN_SECRET")
@@ -48,6 +52,7 @@ class AuthTokenService:
         token = jwt.encode(
             {
                 "sub": str(user.id),
+                "typ": self.ACCESS_TOKEN_TYPE,
                 "email": str(user.email),
                 "auth_provider": auth_provider.value,
                 "iat": now,
@@ -63,6 +68,7 @@ class AuthTokenService:
         token = jwt.encode(
             {
                 "sub": str(user_id),
+                "typ": self.REFRESH_TOKEN_TYPE,
                 "jti": jti,
                 "exp": datetime.now(timezone.utc)
                 + timedelta(days=self.REFRESH_TOKEN_EXPIRE_DAYS),
@@ -75,21 +81,35 @@ class AuthTokenService:
         )
         return token
 
-    def verify_access_token(self, token: str) -> dict[str, Any]:
+    def _decode(self, token: str, expected_type: str) -> dict[str, Any]:
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.ALGORITHM])
-            logger.debug(
-                "[token] verify_access | result=ok user_id=%s", payload.get("sub")
-            )
-            return payload
         except jwt.ExpiredSignatureError as e:
-            logger.debug("[token] verify_access | result=expired")
+            logger.debug("[token] verify_%s | result=expired", expected_type)
             raise ValueError("El token expiró.") from e
         except jwt.InvalidTokenError as e:
             logger.debug(
-                "[token] verify_access | result=invalid error=%s", type(e).__name__
+                "[token] verify_%s | result=invalid error=%s",
+                expected_type,
+                type(e).__name__,
             )
             raise ValueError("El token no es válido.") from e
+        if payload.get("typ") != expected_type or not payload.get("sub"):
+            logger.debug("[token] verify_%s | result=wrong_type", expected_type)
+            raise ValueError("El token no es válido.")
+        return payload
+
+    def verify_access_token(self, token: str) -> dict[str, Any]:
+        payload = self._decode(token, self.ACCESS_TOKEN_TYPE)
+        logger.debug("[token] verify_access | result=ok user_id=%s", payload.get("sub"))
+        return payload
+
+    def verify_refresh_token_jwt(self, token: str) -> dict[str, Any]:
+        """Decodifica un refresh token; exige `typ=refresh` y `jti`."""
+        payload = self._decode(token, self.REFRESH_TOKEN_TYPE)
+        if not payload.get("jti"):
+            raise ValueError("El token no es válido.")
+        return payload
 
     async def verify_refresh_token(self, user_id: uuid.UUID, jti: str) -> bool:
         stored = await self.redis.get(f"refresh:{user_id}")

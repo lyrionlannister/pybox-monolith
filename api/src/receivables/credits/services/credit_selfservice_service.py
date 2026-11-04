@@ -10,7 +10,10 @@ from app_platform.countries.enums.country_enums import UserDocumentType
 from app_platform.support.enums.support_enums import PaymentTopic
 from app_platform.support.schemas.support_schemas import SupportFilter
 from app_platform.support.services.support_service import SupportService
-from core.security.policies.security_policies import get_self_identity
+from core.security.policies.security_policies import (
+    get_self_identity,
+    require_verified_identity,
+)
 from identity.users.schemas.user_session_schema import UserSession
 from receivables.credits.models.credit_settlement_ticket_model import (
     CreditSettlementTicketModel,
@@ -101,6 +104,7 @@ class CreditSelfServiceService:
     async def _resolve_owned_credit(
         self, session: UserSession, credit_id: uuid.UUID
     ) -> tuple[object, uuid.UUID]:
+        require_verified_identity(session)
         doc_type_str, doc_number_hash = get_self_identity(session)
         try:
             doc_type = UserDocumentType(doc_type_str)

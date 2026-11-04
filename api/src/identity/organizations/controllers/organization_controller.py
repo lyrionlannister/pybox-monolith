@@ -9,6 +9,7 @@ from app_platform.documents.utils.document_naming import (
     generate_uuid7_filename,
     resolve_content_type,
 )
+from app_platform.documents.utils.upload_limits import read_within_limit
 from app_platform.support.dependencies import SupportServiceDep
 from core.config.api_router import APIRouter
 from core.security.dependencies import CurrentSession, PendingMfaSession
@@ -17,6 +18,9 @@ from core.security.policies.security_policies import (
     require_org_access,
 )
 from identity.onboarding.dependencies import CurrentScope
+from identity.organizations.constants.organization_constants import (
+    MAX_DOCUMENT_UPLOAD_SIZE_BYTES,
+)
 from identity.organizations.dependencies import AdminScopeDep, OrgServiceDep
 from identity.organizations.enums.organization_enums import (
     EntitySectors,
@@ -165,7 +169,7 @@ async def update_org_document(
     if admin_scope == UserScope.ORGANIZATION:
         await service.assert_admin_of_org(session.user_id, org_id)
     org = await service.get_by_id(org_id)
-    file_bytes = await file.read()
+    file_bytes = await read_within_limit(file, MAX_DOCUMENT_UPLOAD_SIZE_BYTES)
     require_within_size_limit(file_bytes)
 
     if doc_type == "logo" and resolve_content_type(file.filename) == "application/pdf":
@@ -268,13 +272,19 @@ async def register_organization(
     mercantile_document_file: UploadFile = File(...),
     representative_document_file: UploadFile = File(...),
 ) -> OrgRegisterResponse:
-    fiscal_bytes = await fiscal_document_file.read()
+    fiscal_bytes = await read_within_limit(
+        fiscal_document_file, MAX_DOCUMENT_UPLOAD_SIZE_BYTES
+    )
     require_within_size_limit(fiscal_bytes)
     fiscal_filename = generate_uuid7_filename(fiscal_document_file.filename)
-    mercantile_bytes = await mercantile_document_file.read()
+    mercantile_bytes = await read_within_limit(
+        mercantile_document_file, MAX_DOCUMENT_UPLOAD_SIZE_BYTES
+    )
     require_within_size_limit(mercantile_bytes)
     mercantile_filename = generate_uuid7_filename(mercantile_document_file.filename)
-    rep_bytes = await representative_document_file.read()
+    rep_bytes = await read_within_limit(
+        representative_document_file, MAX_DOCUMENT_UPLOAD_SIZE_BYTES
+    )
     require_within_size_limit(rep_bytes)
     rep_filename = generate_uuid7_filename(representative_document_file.filename)
     org = await service.register_with_representative(

@@ -41,8 +41,9 @@ class VerificationCodeModel(IdMixin, CreatedAtMixin, UpdatedAtMixin, SoftDeleteM
         nullable=False,
         name="canal",
     )
+    # HMAC-SHA256 en hex (ver `hash_verification_code`), nunca el OTP en claro.
     code: Mapped[str] = mapped_column(
-        String(6), nullable=False, index=True, name="codigo"
+        String(64), nullable=False, index=True, name="codigo"
     )
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, name="expira_en"

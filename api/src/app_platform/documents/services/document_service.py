@@ -117,6 +117,35 @@ class DocumentService:
             organization_id=organization_id,
         )
 
+    async def store_verified_upload(
+        self,
+        content: bytes,
+        filename: str,
+        content_type: str,
+        domain: str,
+        owner_id: str,
+        uploaded_by: Optional[uuid.UUID] = None,
+        organization_id: Optional[uuid.UUID] = None,
+    ) -> DocumentModel:
+        """Guarda bytes que subió un usuario y que el llamador ya leyó (con límite) y
+        tipó por extensión. A diferencia de `store_generated`, confirma que el
+        contenido real corresponde a `content_type`: sin eso, un HTML renombrado a
+        .png o .pdf quedaba guardado y servido como si fuera ese tipo."""
+        if not content:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY, "El archivo está vacío"
+            )
+        verify_magic_bytes(content, content_type)
+        return await self._persist(
+            content=content,
+            filename=filename,
+            content_type=content_type,
+            domain=domain,
+            owner_id=owner_id,
+            uploaded_by=uploaded_by,
+            organization_id=organization_id,
+        )
+
     # ── Lectura ──────────────────────────────────────────────────────────────
 
     async def get_by_id(self, document_id: uuid.UUID) -> Optional[DocumentModel]:

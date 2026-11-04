@@ -1,5 +1,6 @@
 """Schema de la solicitud de llamada de prueba desde el diseñador de flujos IVR."""
 
+import uuid
 from typing import Any
 
 from pydantic import Field
@@ -23,8 +24,8 @@ class IvrTestCallRequest(BaseSchema):
     customer_document: str | None = Field(
         default=None, description="Documento del cliente"
     )
-    campaign_id: str | None = Field(
-        default=None, description="ID de campaña (default 'TEST')"
+    portfolio_id: uuid.UUID = Field(
+        description="Portafolio cuyo flujo se prueba (autoriza la llamada)"
     )
     redial_config: dict[str, Any] | None = Field(
         default=None,

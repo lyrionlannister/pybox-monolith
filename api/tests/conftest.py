@@ -58,9 +58,11 @@ from core.seed import (
     seed_platform_gateway_credentials,
 )
 from identity.auth.dependencies import _get_token_payload
+from identity.auth.services.verification_service import VerificationService
 from identity.users.enums.user_enums import UserRole, UserScope
 from identity.users.schemas.user_session_schema import UserSession
 from main import app as fastapi_app
+from tests.factories import TEST_OTP_CODE
 
 
 # ---------------------------------------------------------------------------
@@ -128,6 +130,14 @@ class _FakeAsyncRedis:
 
     async def aclose(self) -> None:
         return None
+
+
+@pytest.fixture(autouse=True)
+def deterministic_otp(monkeypatch):
+    """Los OTP se guardan hasheados: los tests conocen el código por esta vía."""
+    monkeypatch.setattr(
+        VerificationService, "_generate_code", lambda self: TEST_OTP_CODE
+    )
 
 
 @pytest_asyncio.fixture(autouse=True)

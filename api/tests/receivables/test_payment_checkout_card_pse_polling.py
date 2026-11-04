@@ -83,7 +83,11 @@ async def _setup_payment(db_session):
 
 
 def _self_session(make_user_session_factory, document_number_hash: str):
-    from identity.users.enums.user_enums import UserRole, UserScope
+    from identity.users.enums.user_enums import (
+        IdentityVerificationStatus,
+        UserRole,
+        UserScope,
+    )
 
     return make_user_session_factory(
         role=UserRole.USER,
@@ -91,6 +95,7 @@ def _self_session(make_user_session_factory, document_number_hash: str):
         orgs={},
         document_type="CC",
         document_number_hash=document_number_hash,
+        identity_verification_status=IdentityVerificationStatus.APPROVED,
     )
 
 

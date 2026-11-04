@@ -175,3 +175,6 @@ DATE_FORMATS = ["%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y", "%m/%d/%Y"]
 
 # Valores aceptados como "sí" en columnas booleanas tipo SI/NO del CSV.
 AFFIRMATIVE_STRINGS = {"si", "sí", "yes", "true", "1", "x"}
+
+# Debajo del client_max_body_size de nginx (25 MB): se corta al leer, no después.
+MAX_CSV_UPLOAD_BYTES = 20 * 1024 * 1024

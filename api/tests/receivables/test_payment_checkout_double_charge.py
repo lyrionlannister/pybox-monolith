@@ -4,13 +4,18 @@ APPROVED para la misma cuota -- doble clic, reintento de red o carrera entre el
 checkout manual y el cron de 3RI no deben generar dos cargos."""
 
 from datetime import datetime, timezone
+from decimal import Decimal
 from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import HTTPException
 
 from core.security.services.encrypt_service import encrypt_service
-from identity.users.enums.user_enums import UserRole, UserScope
+from identity.users.enums.user_enums import (
+    IdentityVerificationStatus,
+    UserRole,
+    UserScope,
+)
 from receivables.credits.repository.credit_repository import CreditRepository
 from receivables.debtors.repository.debtor_repository import DebtorRepository
 from receivables.payment_gateways.enums.payment_gateway_enums import (
@@ -50,6 +55,7 @@ def _self_session(make_user_session_factory, document_number_hash: str):
         orgs={},
         document_type="CC",
         document_number_hash=document_number_hash,
+        identity_verification_status=IdentityVerificationStatus.APPROVED,
     )
 
 
@@ -140,3 +146,52 @@ class TestPaymentCheckoutDoubleCharge:
 
         assert exc_info.value.status_code == 409
         gateway.create_transaction.assert_not_awaited()
+
+    async def test_locks_the_payment_row_before_checking_attempts(
+        self, db_session, own_payment
+    ):
+        """Primer cobro: no hay intento previo que bloquear, así que la cuota misma
+        se bloquea (`SELECT ... FOR UPDATE`) para serializar cobros concurrentes."""
+        payment, session = own_payment
+        payment.payment_amount = Decimal("100")
+        payment_repo = PaymentRepository(db_session)
+        calls: list[str] = []
+        original_lock = payment_repo.lock_for_charge
+
+        async def _tracking_lock(payment_id):
+            calls.append("lock")
+            await original_lock(payment_id)
+
+        payment_repo.lock_for_charge = _tracking_lock
+        attempt_repo = CreditPaymentAttemptRepository(db_session)
+        original_latest = attempt_repo.get_latest_by_payment_id
+
+        async def _tracking_latest(*args, **kwargs):
+            calls.append("latest")
+            return await original_latest(*args, **kwargs)
+
+        attempt_repo.get_latest_by_payment_id = _tracking_latest
+        gateway_resolver = AsyncMock()
+        gateway = AsyncMock()
+        gateway.create_transaction.side_effect = RuntimeError("detener aquí")
+        gateway_resolver.get_active_for_organization.return_value = gateway
+        service = PaymentCheckoutService(
+            _make_ownership_resolver(db_session),
+            attempt_repo,
+            gateway_resolver,
+            payment_repo,
+        )
+        card = CardPaymentMethod(
+            number="4242424242424242",
+            cvc="123",
+            exp_month="12",
+            exp_year="29",
+            card_holder="Test",
+        )
+
+        with pytest.raises(RuntimeError):
+            await service.create_transaction(
+                session, payment.id, card, "debtor@example.com"
+            )
+
+        assert calls[:2] == ["lock", "latest"]

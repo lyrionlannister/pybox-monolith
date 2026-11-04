@@ -7,7 +7,7 @@ import { PaymentMethodCard } from "@/ui/components/calendar/payment-method-card"
 import { usePaymentSelfService } from "@/credits/hooks/use-payment-selfservice";
 import { WompiCheckoutForm } from "@/credits/components/wompi-checkout/wompi-checkout-form";
 
-const RECEIPT_ACCEPT = ".jpg,.jpeg,.png,.pdf,.doc";
+const RECEIPT_ACCEPT = ".jpg,.jpeg,.png,.pdf";
 
 const dateOnly = (offsetDays: number): string => {
   const d = new Date();

@@ -3,7 +3,10 @@ import uuid
 import pytest
 from fastapi import HTTPException
 
+from core.database.redis import redis_client
+from core.security import dependencies as security_dependencies
 from core.security.dependencies import (
+    WsSessionGuard,
     _load_session,
     _subject_to_uuid,
     get_pending_mfa_session,
@@ -94,6 +97,7 @@ class TestStreamSessionDependencies:
     async def test_ws_session_invalid_cookie_raises_401(self):
         class _FakeWebSocket:
             cookies: dict = {"access_token": "not-a-real-jwt"}
+            headers: dict = {}
 
         with pytest.raises(HTTPException) as exc:
             await get_ws_session(_FakeWebSocket())
@@ -109,3 +113,45 @@ class TestStreamSessionDependencies:
         with pytest.raises(HTTPException) as exc:
             await get_sse_session(_FakeRequest())
         assert exc.value.status_code == 401
+
+
+class TestWebSocketHardening:
+    async def test_foreign_origin_is_rejected_before_auth(self, monkeypatch):
+        monkeypatch.setenv("CORS_ORIGINS", "https://app.example.com")
+
+        class _FakeWebSocket:
+            cookies: dict = {}
+            headers: dict = {"origin": "https://evil.example.net"}
+
+        with pytest.raises(HTTPException) as exc:
+            await get_ws_session(_FakeWebSocket())
+        assert exc.value.status_code == 403
+
+    async def test_allowed_origin_continues_to_token_check(self, monkeypatch):
+        monkeypatch.setenv("CORS_ORIGINS", "https://app.example.com")
+
+        class _FakeWebSocket:
+            cookies: dict = {}
+            headers: dict = {"origin": "https://app.example.com"}
+
+        with pytest.raises(HTTPException) as exc:
+            await get_ws_session(_FakeWebSocket())
+        assert exc.value.status_code == 401
+
+    async def test_guard_closes_revoked_session(self, monkeypatch):
+        monkeypatch.setattr(security_dependencies, "WS_SESSION_RECHECK_SECONDS", 0)
+        user_id = uuid.uuid4()
+        guard = WsSessionGuard(_make_session(user_id))
+        with pytest.raises(HTTPException) as exc:
+            await guard.current()
+        assert exc.value.status_code == 401
+
+    async def test_guard_refreshes_live_session(self, monkeypatch):
+        monkeypatch.setattr(security_dependencies, "WS_SESSION_RECHECK_SECONDS", 0)
+        user_id = uuid.uuid4()
+        fresh = UserSession(
+            user_id=user_id, full_name="Nuevo", email="t@example.com", mfa_enabled=False
+        )
+        await redis_client.set_json(session_key(user_id), fresh)
+        guard = WsSessionGuard(_make_session(user_id))
+        assert (await guard.current()).full_name == "Nuevo"

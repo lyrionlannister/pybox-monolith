@@ -12,6 +12,16 @@ from receivables.payments.models.payment_model import PaymentModel
 class PaymentRepository(SoftDeleteRepositoryBase[PaymentModel]):
     model_class = PaymentModel
 
+    async def lock_for_charge(self, payment_id: uuid.UUID) -> None:
+        """`SELECT ... FOR UPDATE` sobre la cuota: serializa los intentos de cobro
+        concurrentes de una misma cuota. Bloquear solo el último intento no alcanza
+        en el primer cobro, cuando todavía no hay ninguna fila que bloquear."""
+        await self.session.execute(
+            select(PaymentModel.id)
+            .where(PaymentModel.id == payment_id)
+            .with_for_update()
+        )
+
     async def get_by_credit_id(self, credit_id: uuid.UUID) -> list[PaymentModel]:
         result = await self.session.execute(
             select(PaymentModel)

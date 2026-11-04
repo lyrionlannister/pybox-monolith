@@ -23,6 +23,7 @@ from core.security.policies.security_policies import (
     check_portfolio_org_access,
     has_permission,
 )
+from core.tools.csv_tools import neutralize_formulas
 from identity.users.schemas.user_session_schema import UserSession
 from receivables.portfolios.enums.portfolio_document_enums import (
     PortfolioDocumentCategory,
@@ -46,6 +47,9 @@ from receivables.segments.schemas.segment_schemas import (
     SegmentExecuteRequest,
     SegmentResponse,
     SegmentUpdateRequest,
+)
+from receivables.portfolios.services.portfolio_user_access_service import (
+    PortfolioUserAccessService,
 )
 
 _segment_list_adapter: TypeAdapter[list[SegmentResponse]] = TypeAdapter(
@@ -77,7 +81,12 @@ class SegmentService:
     ) -> None:
         portfolio = await self._portfolio_repo.get_by_id(portfolio_id)
         await check_portfolio_org_access(
-            user_session, portfolio, PORTFOLIO_COMMUNICATIONS
+            user_session,
+            portfolio,
+            PORTFOLIO_COMMUNICATIONS,
+            check_access=PortfolioUserAccessService(
+                self._portfolio_repo.session
+            ).check_access,
         )
 
     async def create(
@@ -280,7 +289,7 @@ class SegmentService:
         if portfolio is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Portafolio no encontrado")
         document = await self._document_service.store_generated(
-            content=df.write_csv().encode("utf-8"),
+            content=neutralize_formulas(df).write_csv().encode("utf-8"),
             filename=file_name,
             content_type=CSV_CONTENT_TYPE,
             domain=PORTFOLIO_DOCUMENT_STORAGE_DOMAIN,

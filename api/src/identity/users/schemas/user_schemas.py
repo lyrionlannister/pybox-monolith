@@ -80,6 +80,13 @@ class UpdateUserSchema(BaseSchema):
     mfa_enabled: bool | None = Field(
         default=None, description="Habilitar o deshabilitar MFA"
     )
+    current_password: str | None = Field(
+        default=None,
+        description=(
+            "Contraseña actual: obligatoria cuando el propio usuario cambia su correo "
+            "o desactiva su MFA"
+        ),
+    )
 
 
 class ProfilePhotoSchema(BaseSchema):

@@ -14,6 +14,7 @@ from app_platform.documents.utils.document_naming import (
     generate_uuid7_filename,
     resolve_content_type,
 )
+from app_platform.documents.utils.upload_limits import read_within_limit
 from app_platform.support.services.support_service import SupportService
 from core.config.logger import logger
 from core.config.redis_config import RedisConfig
@@ -242,8 +243,17 @@ class OnboardingService:
         la verificación OTP, así que se aísla en un savepoint (begin_nested): si la
         propagación falla y envenena la transacción, solo se revierte el savepoint, no
         el OTP ya persistido.
+
+        Solo con la identidad aprobada: el documento lo declara el propio usuario, así
+        que antes de la aprobación cualquiera podría escribir el documento de otra
+        persona y quedar como contacto "verificado" de sus deudas (los contactos ya
+        verificados se propagan al aprobar la identidad, ver `SupportService`).
         """
-        if not user.document_type or not user.document_number_hash:
+        if (
+            not user.document_type
+            or not user.document_number_hash
+            or user.identity_verification_status != IdentityVerificationStatus.APPROVED
+        ):
             return
         if channel == VerificationChannel.EMAIL:
             contact_type = ContactMethodType.EMAIL
@@ -303,16 +313,8 @@ class OnboardingService:
             country_code=nationality,
             required=True,
         )
-        user.document_type = data.document_type
-        user.document_number = (
-            encrypt_service.encrypt_to_str(data.document_number)
-            if data.document_number
-            else None
-        )
-        user.document_number_hash = (
-            encrypt_service.hash_document(data.document_number)
-            if data.document_number
-            else None
+        await self._user_service.apply_document_change(
+            user, data.document_type, data.document_number or "", by_self=True
         )
         user.nationality = data.nationality
         await self._user_repo.update(user)
@@ -481,15 +483,9 @@ class OnboardingService:
         label: str,
         user_id: uuid.UUID,
     ):
-        content = await file.read()
-        if len(content) > MAX_DOCUMENT_SIZE_BYTES:
-            limit_mb = MAX_DOCUMENT_SIZE_BYTES // (1024 * 1024)
-            raise HTTPException(
-                status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                f"El archivo '{label}' supera el límite de {limit_mb} MB",
-            )
+        content = await read_within_limit(file, MAX_DOCUMENT_SIZE_BYTES)
         filename = generate_uuid7_filename(file.filename)
-        return await self._document_service.store_generated(
+        return await self._document_service.store_verified_upload(
             content=content,
             filename=filename,
             content_type=resolve_content_type(filename),

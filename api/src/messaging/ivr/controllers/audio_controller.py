@@ -4,6 +4,8 @@ from typing import Annotated, Any
 
 from fastapi import File, Form, Header, Response, UploadFile, status
 
+from app_platform.documents.enums.document_enums import MAX_DOCUMENT_SIZE_BYTES
+from app_platform.documents.utils.upload_limits import read_within_limit
 from core.config.api_router import APIRouter
 from core.security.dependencies import CurrentSession
 from core.security.policies.security_policies import (
@@ -47,7 +49,7 @@ async def upload_audio(
     slot_number: Annotated[str | None, Form(alias="slotNumber")] = None,
 ) -> dict[str, Any]:
     require_global_admin(session)
-    buffer = await file.read()
+    buffer = await read_within_limit(file, MAX_DOCUMENT_SIZE_BYTES)
     return await client.upload_sound(
         file_buffer=buffer,
         file_name=file.filename or "audio.wav",

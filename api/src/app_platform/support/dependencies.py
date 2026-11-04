@@ -72,8 +72,16 @@ def get_support_filter(
         if org_roles & _STAFF_ROLES:
             is_admin = UserRole.ADMIN in org_roles
             is_cs = UserRole.CUSTOMER_SERVICE in org_roles
+            staff_org_ids = [
+                uuid.UUID(o)
+                for o, entry in session.orgs.items()
+                if entry.role in _STAFF_ROLES
+            ]
+            mixed_roles = len(staff_org_ids) < len(org_ids)
             return SupportFilter(
                 org_ids=org_ids,
+                staff_org_ids=staff_org_ids if mixed_roles else None,
+                viewer_id=session.user_id if mixed_roles else None,
                 include_resolved=include_resolved,
                 can_resolve=is_cs,
                 can_assign=is_admin or is_cs,

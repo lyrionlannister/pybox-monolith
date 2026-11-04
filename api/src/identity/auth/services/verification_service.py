@@ -19,6 +19,7 @@ from identity.auth.exceptions import (
 from identity.auth.models.verification_code_model import VerificationCodeModel
 from identity.auth.repository.verification_code_repository import (
     VerificationCodeRepository,
+    hash_verification_code,
 )
 
 EXPIRATION_MINUTES = 5
@@ -69,7 +70,7 @@ class VerificationService(ABC):
         record = VerificationCodeModel(
             user_id=user.id,
             channel=self.channel,
-            code=code,
+            code=hash_verification_code(user.id, code),
             expires_at=datetime.now() + timedelta(minutes=EXPIRATION_MINUTES),
         )
         await self._repo.add(record)

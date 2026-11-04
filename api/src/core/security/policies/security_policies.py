@@ -6,7 +6,7 @@ from typing import Awaitable, Callable, Protocol
 from fastapi import HTTPException, status
 
 from identity.organizations.enums.organization_enums import VerificationStatus
-from identity.users.enums.user_enums import UserRole
+from identity.users.enums.user_enums import IdentityVerificationStatus, UserRole
 from identity.users.schemas.user_session_schema import UserSession
 
 # Tupla (document_type, document_number_hash) usada para filtrar queries de deudores.
@@ -15,6 +15,7 @@ SelfIdentity = tuple[str, str]
 
 
 class _OwnedByOrganization(Protocol):
+    id: uuid.UUID
     organization_id: uuid.UUID
 
 
@@ -132,6 +133,20 @@ def require_self(session: UserSession) -> None:
         )
 
 
+def require_verified_identity(session: UserSession) -> None:
+    """El titular SELF debe tener su identidad aprobada por Atención al Cliente.
+
+    Conocer el tipo+número de documento de alguien no es secreto, así que ser deudor
+    conocido no basta para operar sobre sus obligaciones (pagos, acuerdos,
+    documentos)."""
+    if session.identity_verification_status != IdentityVerificationStatus.APPROVED:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Verificación de identidad pendiente. Sube tu documento de "
+            "identidad para acceder a tu información crediticia.",
+        )
+
+
 def get_self_identity(session: UserSession) -> SelfIdentity:
     if not session.document_type or not session.document_number_hash:
         raise HTTPException(
@@ -145,18 +160,22 @@ async def check_portfolio_org_access(
     user_session: UserSession,
     portfolio: _OwnedByOrganization | None,
     permission: str,
+    *,
+    check_access: Callable[[uuid.UUID, uuid.UUID, str], Awaitable[bool]],
 ) -> uuid.UUID:
-    """Valida que el portafolio exista y que el usuario tenga el permiso indicado
-    sobre la organización dueña. Usado por los módulos que operan "dentro" de un
-    portafolio (campañas, plantillas, segmentos) para no duplicar esta lógica.
+    """Valida que el portafolio exista, que el usuario tenga el permiso indicado
+    sobre la organización dueña y que tenga acceso a ESE portafolio (un miembro no
+    admin necesita concesión explícita, ver `require_portfolio_access`). Usado por
+    los módulos que operan "dentro" de un portafolio (campañas, plantillas,
+    segmentos, deudores, ...) para no duplicar esta lógica.
     """
     if portfolio is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Portafolio no encontrado")
     if not user_session.is_global:
-        require_org_visibility(
-            user_session, str(portfolio.organization_id), "Portafolio no encontrado"
-        )
-        require_permission(permission, user_session, str(portfolio.organization_id))
+        org_id = str(portfolio.organization_id)
+        require_org_visibility(user_session, org_id, "Portafolio no encontrado")
+        require_permission(permission, user_session, org_id)
+        await require_portfolio_access(user_session, org_id, portfolio.id, check_access)
     return portfolio.organization_id
 
 

@@ -21,7 +21,8 @@ def build_payu_request_signature(
     (`verify_payu_confirmation_signature`), que sí usa decimales."""
     value = str(amount_in_cents // 100)
     message = f"{api_key}~{merchant_id}~{reference_code}~{value}~{currency}"
-    return hashlib.md5(message.encode("utf-8")).hexdigest()
+    # MD5 lo fija el protocolo de firma de PayU, no es una elección nuestra.
+    return hashlib.md5(message.encode("utf-8")).hexdigest()  # nosec B324
 
 
 def verify_payu_confirmation_signature(fields: dict[str, str], api_key: str) -> bool:
@@ -41,7 +42,8 @@ def verify_payu_confirmation_signature(fields: dict[str, str], api_key: str) -> 
         return False
     value = _format_confirmation_value(raw_value)
     message = f"{api_key}~{merchant_id}~{reference_sale}~{value}~{currency}~{state_pol}"
-    expected_signature = hashlib.md5(message.encode("utf-8")).hexdigest()
+    # MD5 lo fija el protocolo de firma de PayU, no es una elección nuestra.
+    expected_signature = hashlib.md5(message.encode("utf-8")).hexdigest()  # nosec B324
     return hmac.compare_digest(expected_signature.lower(), received_signature.lower())
 
 

@@ -13,6 +13,7 @@ from app_platform.documents.enums.document_enums import CSV_CONTENT_TYPE
 from app_platform.documents.services.document_service import DocumentService
 from app_platform.schema_manager.services.dml_service import DmlService
 from core.config.logger import logger
+from core.tools.csv_tools import neutralize_formulas
 from receivables.portfolios.repository.portfolio_repository import PortfolioRepository
 from receivables.reports.models.report_execution_model import ReportExecutionModel
 from receivables.reports.models.report_model import ReportModel
@@ -196,7 +197,7 @@ class ReportService:
         file_name = f"{timestamp}_{safe_name}.csv"
 
         document = await self._document_service.store_generated(
-            content=df.write_csv().encode("utf-8"),
+            content=neutralize_formulas(df).write_csv().encode("utf-8"),
             filename=file_name,
             content_type=CSV_CONTENT_TYPE,
             domain=REPORT_DOCUMENT_STORAGE_DOMAIN,

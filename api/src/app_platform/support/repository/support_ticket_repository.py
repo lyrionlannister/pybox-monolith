@@ -40,6 +40,13 @@ class SupportTicketRepository(SoftDeleteRepositoryBase[SupportTicketModel]):
             conditions.append(SupportTicketModel.organization_id.in_(f.org_ids))
         if f.created_by is not None:
             conditions.append(SupportTicketModel.created_by == f.created_by)
+        if f.staff_org_ids is not None:
+            conditions.append(
+                or_(
+                    SupportTicketModel.organization_id.in_(f.staff_org_ids),
+                    SupportTicketModel.created_by == f.viewer_id,
+                )
+            )
 
         # Search filters
         if f.q:
@@ -88,12 +95,21 @@ class SupportTicketRepository(SoftDeleteRepositoryBase[SupportTicketModel]):
         self,
         org_ids: list[uuid.UUID] | None = None,
         created_by: uuid.UUID | None = None,
+        staff_org_ids: list[uuid.UUID] | None = None,
+        viewer_id: uuid.UUID | None = None,
     ) -> Sequence[SupportTicketModel]:
         conditions = []
         if org_ids is not None:
             conditions.append(SupportTicketModel.organization_id.in_(org_ids))
         if created_by is not None:
             conditions.append(SupportTicketModel.created_by == created_by)
+        if staff_org_ids is not None:
+            conditions.append(
+                or_(
+                    SupportTicketModel.organization_id.in_(staff_org_ids),
+                    SupportTicketModel.created_by == viewer_id,
+                )
+            )
         result = await self.session.execute(
             select(SupportTicketModel).where(*conditions)
         )

@@ -253,11 +253,11 @@ class TestUpdateOrgDocument:
         org_id = create.json()["id"]
         first = await authed_global_admin.patch(
             f"{BASE}/{org_id}/documents/fiscal",
-            files={"file": ("v1.pdf", b"version 1", "application/pdf")},
+            files={"file": ("v1.pdf", b"%PDF-1.4 version 1", "application/pdf")},
         )
         second = await authed_global_admin.patch(
             f"{BASE}/{org_id}/documents/fiscal",
-            files={"file": ("v2.pdf", b"version 2", "application/pdf")},
+            files={"file": ("v2.pdf", b"%PDF-1.4 version 2", "application/pdf")},
         )
         assert second.status_code == 200
         assert first.json()["fiscalDocumentFile"] != second.json()["fiscalDocumentFile"]

@@ -26,6 +26,8 @@ export const ProfileEditPage: React.FC = () => {
     documentType: "",
     documentNumber: "",
   });
+  const [currentPassword, setCurrentPassword] = useState("");
+  const emailChanged = !!user && form.email !== user.email;
 
   useEffect(() => {
     if (user) {
@@ -53,6 +55,7 @@ export const ProfileEditPage: React.FC = () => {
       phoneNumber: form.phoneNumber || undefined,
       documentType: form.documentType || undefined,
       documentNumber: form.documentNumber !== (user.documentNumber ?? "") ? form.documentNumber : undefined,
+      currentPassword: emailChanged ? currentPassword : undefined,
     });
     if (result) navigate("/profile");
   };
@@ -96,6 +99,17 @@ export const ProfileEditPage: React.FC = () => {
               onChange={(e) => handleField("email", e.target.value)}
               placeholder="correo@ejemplo.com"
             />
+            {emailChanged && (
+              <Input
+                label="Contraseña actual (para cambiar el correo)"
+                id="currentPassword"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Tu contraseña actual"
+                autoComplete="current-password"
+              />
+            )}
             <Input
               label="Teléfono"
               id="phoneNumber"

@@ -70,7 +70,7 @@ async def org_session(
     make_user_session_factory,
     org_id: uuid.UUID,
     *,
-    role: UserRole = UserRole.USER,
+    role: UserRole = UserRole.ADMIN,
 ) -> UserSession:
     return make_user_session_factory(
         user_id=await _real_user_id(db_session),

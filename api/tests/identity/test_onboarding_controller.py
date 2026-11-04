@@ -7,9 +7,16 @@ import pytest
 from sqlalchemy import select
 
 from identity.auth.models.verification_code_model import VerificationCodeModel
-from identity.users.enums.user_enums import UserRole, UserScope
+from identity.users.enums.user_enums import (
+    IdentityVerificationStatus,
+    UserRole,
+    UserScope,
+)
 from messaging.providers.email_provider import NRS360EmailProvider
-from tests.factories import get_user_by_email, register_payload
+from receivables.contact_methods.enums.contact_method_enums import ContactMethodType
+from receivables.contact_methods.models.contact_method_model import ContactMethodModel
+from tests.factories import TEST_OTP_CODE, get_user_by_email, register_payload
+from tests.receivables.conftest import add_organization, build_debtor
 
 AUTH_BASE = "/api/v1/auth"
 BASE = "/api/v1/onboarding"
@@ -93,9 +100,58 @@ class TestVerifyOtp:
         )
 
         resp = await authed.post(
-            f"{BASE}/verify-otp", json={"channel": "EMAIL", "code": code_row.code}
+            f"{BASE}/verify-otp", json={"channel": "EMAIL", "code": TEST_OTP_CODE}
         )
         assert resp.status_code == 204
+
+    @pytest.mark.parametrize(
+        ("status_value", "expected_rows"),
+        [
+            (IdentityVerificationStatus.NOT_SUBMITTED, 0),
+            (IdentityVerificationStatus.PENDING, 0),
+            (IdentityVerificationStatus.APPROVED, 1),
+        ],
+    )
+    async def test_verified_email_propagates_only_with_approved_identity(
+        self, onboarding_user, db_session, status_value, expected_rows
+    ):
+        authed, user, payload = onboarding_user
+        org = await add_organization(db_session)
+        debtor = build_debtor(org.id, document_number_plain=payload["document_number"])
+        db_session.add(debtor)
+        user.identity_verification_status = status_value
+        await db_session.flush()
+
+        await authed.post(f"{BASE}/request-otp", json={"channel": "EMAIL"})
+        code_row = (
+            (
+                await db_session.execute(
+                    select(VerificationCodeModel)
+                    .where(VerificationCodeModel.user_id == user.id)
+                    .order_by(VerificationCodeModel.created_at.desc())
+                )
+            )
+            .scalars()
+            .first()
+        )
+        resp = await authed.post(
+            f"{BASE}/verify-otp", json={"channel": "EMAIL", "code": TEST_OTP_CODE}
+        )
+        assert resp.status_code == 204
+
+        rows = (
+            (
+                await db_session.execute(
+                    select(ContactMethodModel).where(
+                        ContactMethodModel.debtor_id == debtor.id,
+                        ContactMethodModel.contact_type == ContactMethodType.EMAIL,
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(rows) == expected_rows
 
     async def test_verify_otp_wrong_code_returns_400(self, onboarding_user):
         authed, _user, _payload = onboarding_user
@@ -178,3 +234,65 @@ class TestUpdateProfile:
             },
         )
         assert resp.status_code == 400
+
+    @pytest.mark.parametrize(
+        "status_value",
+        [IdentityVerificationStatus.PENDING, IdentityVerificationStatus.APPROVED],
+    )
+    async def test_cannot_change_document_after_identity_submitted(
+        self, onboarding_user, db_session, status_value
+    ):
+        authed, user, _payload = onboarding_user
+        original_hash = user.document_number_hash
+        user.identity_verification_status = status_value
+        await db_session.flush()
+        resp = await authed.patch(
+            f"{BASE}/profile",
+            json={
+                "document_type": "CC",
+                "document_number": str(uuid.uuid4().int)[:9],
+                "nationality": "CO",
+            },
+        )
+        assert resp.status_code == 409
+        await db_session.refresh(user)
+        assert user.document_number_hash == original_hash
+        assert user.identity_verification_status == status_value
+
+    async def test_document_of_another_user_returns_409(
+        self, client, onboarding_user, db_session
+    ):
+        authed, _user, _payload = onboarding_user
+        other_payload = register_payload()
+        resp = await client.post(f"{AUTH_BASE}/register/user", json=other_payload)
+        assert resp.status_code == 201
+        resp = await authed.patch(
+            f"{BASE}/profile",
+            json={
+                "document_type": other_payload["document_type"],
+                "document_number": other_payload["document_number"],
+                "nationality": "CO",
+            },
+        )
+        assert resp.status_code == 409
+
+    async def test_denied_identity_resets_to_not_submitted_on_change(
+        self, onboarding_user, db_session
+    ):
+        authed, user, _payload = onboarding_user
+        user.identity_verification_status = IdentityVerificationStatus.DENIED
+        await db_session.flush()
+        resp = await authed.patch(
+            f"{BASE}/profile",
+            json={
+                "document_type": "CC",
+                "document_number": str(uuid.uuid4().int)[:9],
+                "nationality": "CO",
+            },
+        )
+        assert resp.status_code == 204
+        await db_session.refresh(user)
+        assert (
+            user.identity_verification_status
+            == IdentityVerificationStatus.NOT_SUBMITTED
+        )

@@ -48,7 +48,7 @@ def org_session(
     make_user_session_factory,
     org_id: uuid.UUID,
     *,
-    role: UserRole = UserRole.USER,
+    role: UserRole = UserRole.ADMIN,
     permissions: frozenset[str] = frozenset({PORTFOLIO_COMMUNICATIONS}),
 ) -> UserSession:
     return make_user_session_factory(

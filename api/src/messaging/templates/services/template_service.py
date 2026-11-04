@@ -5,6 +5,7 @@ import uuid
 from fastapi import HTTPException, status
 
 from core.config.logger import logger
+from core.database.redis import redis_client
 from core.security.constants.permissions import PORTFOLIO_COMMUNICATIONS
 from core.security.policies.security_policies import check_portfolio_org_access
 from identity.users.schemas.user_session_schema import UserSession
@@ -26,10 +27,16 @@ from messaging.templates.schemas.template_schemas import (
 )
 from messaging.templates.services.template_renderer import TemplateRenderer
 from receivables.portfolios.repository.portfolio_repository import PortfolioRepository
+from receivables.portfolios.services.portfolio_user_access_service import (
+    PortfolioUserAccessService,
+)
 
 # Módulo-nivel, igual que en automation_service.py: un solo dispatcher compartido,
 # no uno por instancia de servicio (cada canal mantiene su propio cliente HTTP).
 _DISPATCHER = MessageDispatcher()
+
+
+TEST_SENDS_PER_HOUR = 20
 
 
 class TemplateService:
@@ -50,7 +57,12 @@ class TemplateService:
     ) -> None:
         portfolio = await self._portfolio_repo.get_by_id(portfolio_id)
         await check_portfolio_org_access(
-            user_session, portfolio, PORTFOLIO_COMMUNICATIONS
+            user_session,
+            portfolio,
+            PORTFOLIO_COMMUNICATIONS,
+            check_access=PortfolioUserAccessService(
+                self._portfolio_repo.session
+            ).check_access,
         )
 
     async def list_by_org(
@@ -164,6 +176,22 @@ class TemplateService:
         user_session: UserSession,
     ) -> TemplateSendResponse:
         template = await self.get_by_id(template_id, portfolio_id, user_session)
+        # Envío de prueba: solo al correo del propio usuario. Con destinatario y
+        # asunto libres este endpoint era un relé de correo con el remitente de la
+        # plataforma (phishing/spam); los envíos reales van por campañas.
+        if str(data.to).lower() != user_session.email.lower():
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "El envío de prueba solo puede ir a tu propio correo.",
+            )
+        sends = await redis_client.increment(
+            f"template-test-send:{user_session.user_id}", 3600
+        )
+        if sends > TEST_SENDS_PER_HOUR:
+            raise HTTPException(
+                status.HTTP_429_TOO_MANY_REQUESTS,
+                "Alcanzaste el límite de envíos de prueba por hora.",
+            )
         if template.channel != TemplateChannel.EMAIL:
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_ENTITY,

@@ -28,6 +28,9 @@ from messaging.whatsapp.services.whatsapp_client import WhatsAppCloudClient
 from messaging.whatsapp.utils.whatsapp_error_utils import meta_error_to_http_exception
 from messaging.whatsapp.utils.whatsapp_template_parser import extract_variable_slots
 from receivables.portfolios.repository.portfolio_repository import PortfolioRepository
+from receivables.portfolios.services.portfolio_user_access_service import (
+    PortfolioUserAccessService,
+)
 
 _APPROVED = "APPROVED"
 _INACTIVE_STATUSES = {"REJECTED", "PAUSED", "DISABLED"}
@@ -71,7 +74,12 @@ class WhatsAppTemplateService:
     ) -> None:
         portfolio = await self._portfolio_repo.get_by_id(portfolio_id)
         await check_portfolio_org_access(
-            user_session, portfolio, PORTFOLIO_COMMUNICATIONS
+            user_session,
+            portfolio,
+            PORTFOLIO_COMMUNICATIONS,
+            check_access=PortfolioUserAccessService(
+                self._portfolio_repo.session
+            ).check_access,
         )
 
     async def create(

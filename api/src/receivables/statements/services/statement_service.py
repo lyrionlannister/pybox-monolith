@@ -43,6 +43,9 @@ from receivables.statements.utils.statement_pdf_builder import (
     StatementPaymentLine,
     build_statement_pdf,
 )
+from receivables.portfolios.services.portfolio_user_access_service import (
+    PortfolioUserAccessService,
+)
 
 # Prefijo del dominio en la clave del objeto. El extracto cuelga del deudor, pero lo
 # genera el módulo de extractos: reemplaza a `DocumentOwnerScope.DEBTOR` + categoría
@@ -261,7 +264,14 @@ class StatementService:
         self, user_session: UserSession, portfolio_id: uuid.UUID
     ):
         portfolio = await self._portfolio_repo.get_by_id(portfolio_id)
-        await check_portfolio_org_access(user_session, portfolio, PORTFOLIO_CLIENTS)
+        await check_portfolio_org_access(
+            user_session,
+            portfolio,
+            PORTFOLIO_CLIENTS,
+            check_access=PortfolioUserAccessService(
+                self._portfolio_repo.session
+            ).check_access,
+        )
         return portfolio
 
     async def _require_document(self, document_id: uuid.UUID) -> DocumentModel:

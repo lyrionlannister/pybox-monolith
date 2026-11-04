@@ -41,4 +41,6 @@ export interface UpdateUserPayload {
   documentType?: string;
   documentNumber?: string;
   mfaEnabled?: boolean;
+  /** Obligatoria cuando el propio usuario cambia su correo o desactiva su MFA. */
+  currentPassword?: string;
 }

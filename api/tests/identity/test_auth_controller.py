@@ -6,9 +6,11 @@ import httpx
 import pytest
 from sqlalchemy import select
 
+from core.database.redis import redis_client
 from identity.auth.enums.auth_enums import AuthProvider
 from identity.auth.enums.notification_enums import VerificationChannel
 from identity.auth.models.verification_code_model import VerificationCodeModel
+from identity.auth.services.auth_service import LOGIN_MAX_FAILED_ATTEMPTS
 from identity.auth.services.oauth_provider_service import (
     OAuthProviderService,
     ProviderProfile,
@@ -18,6 +20,7 @@ from identity.users.enums.user_enums import UserRole, UserScope
 from messaging.providers.email_provider import NRS360EmailProvider
 from tests.factories import (
     STRONG_PASSWORD,
+    TEST_OTP_CODE,
     get_user_by_email,
     register_payload,
     unique_document_number,
@@ -124,6 +127,57 @@ class TestLogin:
             f"{BASE}/login", json={"email": unique_email(), "password": STRONG_PASSWORD}
         )
         assert resp.status_code == 400
+
+    async def test_account_locked_after_repeated_failures(self, client):
+        payload = register_payload()
+        await client.post(f"{BASE}/register", json=payload)
+        client.cookies.clear()
+        wrong = {"email": payload["email"], "password": "OtraClave1!"}
+        for _ in range(LOGIN_MAX_FAILED_ATTEMPTS):
+            resp = await client.post(f"{BASE}/login", json=wrong)
+            assert resp.status_code == 400
+        locked = await client.post(
+            f"{BASE}/login",
+            json={"email": payload["email"], "password": payload["password"]},
+        )
+        assert locked.status_code == 429
+
+    async def test_successful_login_resets_failure_counter(self, client):
+        payload = register_payload()
+        await client.post(f"{BASE}/register", json=payload)
+        client.cookies.clear()
+        wrong = {"email": payload["email"], "password": "OtraClave1!"}
+        good = {"email": payload["email"], "password": payload["password"]}
+        await client.post(f"{BASE}/login", json=wrong)
+        assert (await client.post(f"{BASE}/login", json=good)).status_code == 200
+        assert await redis_client.get(f"login-fail:{payload['email'].lower()}") is None
+
+    async def test_unknown_email_and_wrong_password_same_message(self, client):
+        payload = register_payload()
+        await client.post(f"{BASE}/register", json=payload)
+        client.cookies.clear()
+        wrong_pw = await client.post(
+            f"{BASE}/login", json={"email": payload["email"], "password": "OtraClave1!"}
+        )
+        unknown = await client.post(
+            f"{BASE}/login", json={"email": unique_email(), "password": "OtraClave1!"}
+        )
+        assert wrong_pw.status_code == unknown.status_code == 400
+        assert wrong_pw.json() == unknown.json()
+
+    async def test_login_inactive_user_returns_400(self, client, db_session):
+        payload = register_payload()
+        await client.post(f"{BASE}/register", json=payload)
+        user = await get_user_by_email(db_session, payload["email"])
+        user.is_active = False
+        await db_session.flush()
+        client.cookies.clear()
+        resp = await client.post(
+            f"{BASE}/login",
+            json={"email": payload["email"], "password": payload["password"]},
+        )
+        assert resp.status_code == 400
+        assert "access_token" not in resp.cookies
 
     async def test_login_invalid_body_returns_422(self, client):
         resp = await client.post(f"{BASE}/login", json={"email": "not-an-email"})
@@ -247,6 +301,26 @@ class TestRefresh:
 
     async def test_refresh_invalid_token_returns_400_or_401(self, client):
         resp = await client.post(f"{BASE}/refresh", json={"refresh_token": "not-a-jwt"})
+        assert resp.status_code in (400, 401)
+
+    async def test_refresh_token_is_rejected_as_access_token(self, client):
+        await client.post(f"{BASE}/register", json=register_payload())
+        refresh_token = client.cookies.get("refresh_token")
+        assert refresh_token
+        client.cookies.clear()
+        resp = await client.get(
+            "/api/v1/users/me", headers={"Authorization": f"Bearer {refresh_token}"}
+        )
+        assert resp.status_code == 401
+
+    async def test_access_token_is_rejected_as_refresh_token(self, client):
+        await client.post(f"{BASE}/register", json=register_payload())
+        access_token = client.cookies.get("access_token")
+        assert access_token
+        client.cookies.clear()
+        resp = await client.post(
+            f"{BASE}/refresh", json={"refresh_token": access_token}
+        )
         assert resp.status_code in (400, 401)
 
 
@@ -385,14 +459,17 @@ class TestForgotPassword:
         body = resp.json()
         assert body["maskedEmail"] is not None
 
-    async def test_lookup_unknown_document_returns_uniform_empty_response(self, client):
-        resp = await client.post(
-            f"{BASE}/forgot-password/lookup",
-            json={"document_type": "CC", "document_number": unique_document_number()},
-        )
-        assert resp.status_code == 200
-        body = resp.json()
-        assert body == {"maskedEmail": None, "maskedPhone": None}
+    async def test_lookup_unknown_document_is_indistinguishable(self, client):
+        body_payload = {
+            "document_type": "CC",
+            "document_number": unique_document_number(),
+        }
+        first = await client.post(f"{BASE}/forgot-password/lookup", json=body_payload)
+        second = await client.post(f"{BASE}/forgot-password/lookup", json=body_payload)
+        assert first.status_code == 200
+        body = first.json()
+        assert body["maskedEmail"] and body["maskedPhone"]
+        assert second.json() == body
 
     async def test_send_code_valid(self, client):
         payload = register_payload()
@@ -450,7 +527,7 @@ class TestForgotPassword:
             json={
                 "document_type": payload["document_type"],
                 "document_number": payload["document_number"],
-                "code": code_row.code,
+                "code": TEST_OTP_CODE,
                 "channel": "EMAIL",
             },
         )
@@ -525,7 +602,7 @@ class TestForgotPassword:
             json={
                 "document_type": payload["document_type"],
                 "document_number": payload["document_number"],
-                "code": code_row.code,
+                "code": TEST_OTP_CODE,
                 "channel": "EMAIL",
             },
         )
@@ -560,7 +637,7 @@ class TestForgotPassword:
             json={
                 "document_type": payload["document_type"],
                 "document_number": payload["document_number"],
-                "code": code_row.code,
+                "code": TEST_OTP_CODE,
                 "channel": "EMAIL",
                 "new_password": "OtraFuerte1!",
             },
@@ -602,3 +679,32 @@ class TestForgotPassword:
             },
         )
         assert resp.status_code == 400
+
+
+class TestVerificationCodeStorage:
+    async def test_code_is_not_stored_in_plain_text(self, client, db_session):
+        payload = register_payload()
+        await client.post(f"{BASE}/register/user", json=payload)
+        await client.post(
+            f"{BASE}/forgot-password/send-code",
+            json={
+                "document_type": payload["document_type"],
+                "document_number": payload["document_number"],
+                "channel": "EMAIL",
+            },
+        )
+        user = await get_user_by_email(db_session, payload["email"])
+        row = (
+            (
+                await db_session.execute(
+                    select(VerificationCodeModel).where(
+                        VerificationCodeModel.user_id == user.id
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+        assert row is not None
+        assert row.code != TEST_OTP_CODE
+        assert len(row.code) == 64

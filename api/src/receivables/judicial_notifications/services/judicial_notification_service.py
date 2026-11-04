@@ -23,6 +23,7 @@ from app_platform.notifications.services.notification_service import Notificatio
 from core.security.constants.permissions import PORTFOLIO_JUDICIAL
 from core.security.policies.security_policies import (
     get_self_identity,
+    require_org_visibility,
     require_permission,
 )
 from identity.users.enums.user_enums import IdentityVerificationStatus
@@ -136,6 +137,7 @@ class JudicialNotificationService:
         organization_id = await self._repo.get_credit_organization_id(payload.credit_id)
         if organization_id is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Crédito no encontrado")
+        require_org_visibility(session, str(organization_id))
         require_permission(PORTFOLIO_JUDICIAL, session, str(organization_id))
 
         notification = JudicialNotificationModel(
@@ -166,6 +168,7 @@ class JudicialNotificationService:
         organization_id = await self._repo.get_credit_organization_id(credit_id)
         if organization_id is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Crédito no encontrado")
+        require_org_visibility(session, str(organization_id))
         require_permission(PORTFOLIO_JUDICIAL, session, str(organization_id))
         rows = await self._repo.get_by_credit_id(credit_id)
         attachments_by_notification = await self._get_attachments_by_notification(rows)
@@ -189,12 +192,13 @@ class JudicialNotificationService:
         )
         if organization_id is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Crédito no encontrado")
+        require_org_visibility(session, str(organization_id))
         require_permission(PORTFOLIO_JUDICIAL, session, str(organization_id))
 
         for upload in files:
             content_type = resolve_content_type(upload.filename)
             content = await read_within_limit(upload, MAX_DOCUMENT_SIZE_BYTES)
-            document = await self._document_service.store_generated(
+            document = await self._document_service.store_verified_upload(
                 content=content,
                 filename=safe_original_name(upload.filename),
                 content_type=content_type,
@@ -237,6 +241,7 @@ class JudicialNotificationService:
             )
             if organization_id is None:
                 raise HTTPException(status.HTTP_404_NOT_FOUND, "Crédito no encontrado")
+            require_org_visibility(session, str(organization_id))
             require_permission(PORTFOLIO_JUDICIAL, session, str(organization_id))
 
         # Último eslabón: el adjunto tiene que colgar de ESA notificación. Si no, 404 —
