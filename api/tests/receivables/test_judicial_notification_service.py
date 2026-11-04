@@ -484,7 +484,9 @@ class TestGetAttachmentContent:
             ),
         )
         uploaded = await service.upload_attachments(
-            issuer_session, created.id, [make_upload_file(b"content", "orden.pdf")]
+            issuer_session,
+            created.id,
+            [make_upload_file(b"%PDF-1.4 content", "orden.pdf")],
         )
         document_id = uploaded.attachments[0].id
 
@@ -515,7 +517,9 @@ class TestGetAttachmentContent:
             ),
         )
         uploaded = await service.upload_attachments(
-            issuer_session, created.id, [make_upload_file(b"content", "orden.pdf")]
+            issuer_session,
+            created.id,
+            [make_upload_file(b"%PDF-1.4 content", "orden.pdf")],
         )
         document_id = uploaded.attachments[0].id
 
@@ -546,7 +550,9 @@ class TestGetAttachmentContent:
             ),
         )
         uploaded = await service.upload_attachments(
-            issuer_session, created.id, [make_upload_file(b"content", "orden.pdf")]
+            issuer_session,
+            created.id,
+            [make_upload_file(b"%PDF-1.4 content", "orden.pdf")],
         )
         document_id = uploaded.attachments[0].id
 
@@ -579,7 +585,9 @@ class TestGetAttachmentContent:
             ),
         )
         uploaded = await service.upload_attachments(
-            issuer_session, created.id, [make_upload_file(b"content", "orden.pdf")]
+            issuer_session,
+            created.id,
+            [make_upload_file(b"%PDF-1.4 content", "orden.pdf")],
         )
         document_id = uploaded.attachments[0].id
 

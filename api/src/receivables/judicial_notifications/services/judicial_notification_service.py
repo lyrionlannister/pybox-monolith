@@ -198,7 +198,7 @@ class JudicialNotificationService:
         for upload in files:
             content_type = resolve_content_type(upload.filename)
             content = await read_within_limit(upload, MAX_DOCUMENT_SIZE_BYTES)
-            document = await self._document_service.store_generated(
+            document = await self._document_service.store_verified_upload(
                 content=content,
                 filename=safe_original_name(upload.filename),
                 content_type=content_type,

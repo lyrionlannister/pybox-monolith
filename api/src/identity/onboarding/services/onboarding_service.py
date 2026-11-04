@@ -14,6 +14,7 @@ from app_platform.documents.utils.document_naming import (
     generate_uuid7_filename,
     resolve_content_type,
 )
+from app_platform.documents.utils.upload_limits import read_within_limit
 from app_platform.support.services.support_service import SupportService
 from core.config.logger import logger
 from core.config.redis_config import RedisConfig
@@ -482,15 +483,9 @@ class OnboardingService:
         label: str,
         user_id: uuid.UUID,
     ):
-        content = await file.read()
-        if len(content) > MAX_DOCUMENT_SIZE_BYTES:
-            limit_mb = MAX_DOCUMENT_SIZE_BYTES // (1024 * 1024)
-            raise HTTPException(
-                status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                f"El archivo '{label}' supera el límite de {limit_mb} MB",
-            )
+        content = await read_within_limit(file, MAX_DOCUMENT_SIZE_BYTES)
         filename = generate_uuid7_filename(file.filename)
-        return await self._document_service.store_generated(
+        return await self._document_service.store_verified_upload(
             content=content,
             filename=filename,
             content_type=resolve_content_type(filename),

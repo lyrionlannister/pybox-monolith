@@ -11,7 +11,7 @@ import { Alert } from "@/ui/components/alert/alert";
 import { CreditStatusBadge } from "@/credits/components/credit-status-badge";
 import { Button } from "@/ui/components/button/button";
 
-const RECEIPT_ACCEPT = ".jpg,.jpeg,.png,.pdf,.doc";
+const RECEIPT_ACCEPT = ".jpg,.jpeg,.png,.pdf";
 
 export const CreditDetailPage: React.FC = () => {
   const { creditId } = useParams<{ creditId: string }>();

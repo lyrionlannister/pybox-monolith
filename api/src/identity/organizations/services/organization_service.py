@@ -176,7 +176,7 @@ class OrganizationService:
         El anterior se da de baja al final y no antes: si la subida del nuevo falla, la
         entidad se queda con el que tenía en vez de sin ninguno.
         """
-        document = await self._document_service.store_generated(
+        document = await self._document_service.store_verified_upload(
             content=file_bytes,
             filename=filename,
             content_type=resolve_content_type(filename),
@@ -477,7 +477,7 @@ class OrganizationService:
         # almacén siempre es un UUID (build_object_key), nunca este nombre.
         rep_filename = representative_filename
 
-        fiscal_doc = await self._document_service.store_generated(
+        fiscal_doc = await self._document_service.store_verified_upload(
             content=fiscal_file_bytes,
             filename=fiscal_filename,
             content_type=resolve_content_type(fiscal_filename),
@@ -486,7 +486,7 @@ class OrganizationService:
             uploaded_by=created_by_user_id,
             organization_id=org.id,
         )
-        mercantile_doc = await self._document_service.store_generated(
+        mercantile_doc = await self._document_service.store_verified_upload(
             content=mercantile_file_bytes,
             filename=mercantile_filename,
             content_type=resolve_content_type(mercantile_filename),
@@ -495,7 +495,7 @@ class OrganizationService:
             uploaded_by=created_by_user_id,
             organization_id=org.id,
         )
-        rep_doc = await self._document_service.store_generated(
+        rep_doc = await self._document_service.store_verified_upload(
             content=representative_file_bytes,
             filename=rep_filename,
             content_type=resolve_content_type(rep_filename),

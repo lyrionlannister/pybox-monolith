@@ -105,7 +105,7 @@ export const StepDetails: React.FC<StepDetailsProps> = ({
       <div>
         <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
           Adjuntos{" "}
-          <span className="font-normal text-gray-400">(opcional · .doc, .jpg, .png)</span>
+          <span className="font-normal text-gray-400">(opcional · .pdf, .jpg, .png)</span>
         </label>
         <label
           className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-4 py-5 transition-colors hover:border-brand-400 hover:bg-brand-50 dark:border-gray-700 dark:hover:border-brand-500 dark:hover:bg-brand-500/10"
@@ -117,7 +117,7 @@ export const StepDetails: React.FC<StepDetailsProps> = ({
           <input
             type="file"
             multiple
-            accept=".doc,.jpg,.jpeg,.png"
+            accept=".pdf,.jpg,.jpeg,.png"
             className="hidden"
             onChange={(e) => onAddFiles(e.target.files)}
           />

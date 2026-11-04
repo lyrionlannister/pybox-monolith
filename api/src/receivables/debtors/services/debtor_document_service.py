@@ -11,6 +11,8 @@ from app_platform.documents.models.document_model import DocumentModel
 from app_platform.documents.schemas.document_schemas import DocumentCategoryOption
 from app_platform.documents.services.document_service import DocumentService
 from app_platform.documents.utils.document_naming import checksum as compute_checksum
+from app_platform.documents.enums.document_enums import MAX_DOCUMENT_SIZE_BYTES
+from app_platform.documents.utils.upload_limits import read_within_limit
 from core.security.policies.security_policies import (
     get_self_identity,
     require_verified_identity,
@@ -125,7 +127,7 @@ class DebtorDocumentService:
         nada. Si el deudor ya tiene un archivo con ese contenido y esa categoría, se
         reutiliza esa fila.
         """
-        content = await file.read()
+        content = await read_within_limit(file, MAX_DOCUMENT_SIZE_BYTES)
         await file.seek(0)
         existing = await self._repo.get_by_checksum(
             debtor_id, compute_checksum(content)

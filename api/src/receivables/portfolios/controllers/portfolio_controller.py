@@ -10,6 +10,7 @@ from app_platform.dashboard.schemas.dashboard_schemas import (
     MonthlySendsResponse,
     SendStatusCountsResponse,
 )
+from app_platform.documents.utils.upload_limits import read_within_limit
 from core.config.api_router import APIRouter
 from core.config.logger import logger
 from core.security.constants.permissions import (
@@ -29,6 +30,9 @@ from core.security.policies.security_policies import (
 from core.security.rate_limit import rate_limit
 from identity.onboarding.dependencies import CurrentOrg
 from identity.organizations.dependencies import OrgServiceDep
+from receivables.portfolios.constants.portfolio_csv_constants import (
+    MAX_CSV_UPLOAD_BYTES,
+)
 from receivables.portfolios.background_tasks import (
     append_and_notify,
     process_and_notify,
@@ -128,7 +132,7 @@ async def upload_csv(
             "Ya estás cargando un portfolio, intenta más tarde.",
         )
 
-    file_bytes = await file.read()
+    file_bytes = await read_within_limit(file, MAX_CSV_UPLOAD_BYTES)
     uploading_orgs.add(selected_org_id)
     logger.info(
         "[portfolio] archivo leído | tamaño=%d bytes | org=%s",
@@ -183,7 +187,7 @@ async def upload_csv_append(
             "Ya hay una carga activa para esta organización.",
         )
 
-    file_bytes = await file.read()
+    file_bytes = await read_within_limit(file, MAX_CSV_UPLOAD_BYTES)
     uploading_orgs.add(portfolio.organization_id)
 
     background_tasks.add_task(
@@ -234,7 +238,7 @@ async def upload_csv_update(
             "Ya hay una carga activa para esta organización.",
         )
 
-    file_bytes = await file.read()
+    file_bytes = await read_within_limit(file, MAX_CSV_UPLOAD_BYTES)
     uploading_orgs.add(portfolio.organization_id)
 
     background_tasks.add_task(

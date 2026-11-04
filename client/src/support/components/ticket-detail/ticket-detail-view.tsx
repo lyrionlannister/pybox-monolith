@@ -185,7 +185,7 @@ export const TicketDetailView: React.FC<TicketDetailViewProps> = ({ ticket, onTi
                       type="file"
                       className="sr-only"
                       multiple
-                      accept=".jpg,.jpeg,.png,.doc"
+                      accept=".jpg,.jpeg,.png,.pdf"
                       onChange={handleFileChange}
                     />
                   </label>

@@ -5,6 +5,7 @@ from typing import Annotated
 
 from fastapi import BackgroundTasks, HTTPException, Query, UploadFile, status
 
+from app_platform.documents.utils.upload_limits import read_within_limit
 from core.config.api_router import APIRouter
 from core.config.logger import logger
 from core.security.constants.permissions import PORTFOLIO_UPLOAD_UPDATE
@@ -14,6 +15,9 @@ from core.security.policies.security_policies import (
     require_org_visibility,
 )
 from identity.organizations.dependencies import OrgServiceDep
+from receivables.portfolios.constants.portfolio_csv_constants import (
+    MAX_CSV_UPLOAD_BYTES,
+)
 from receivables.portfolios.dependencies import PortfolioServiceDep
 from receivables.portfolios.installment_background_tasks import (
     installments_and_notify,
@@ -64,7 +68,7 @@ async def upload_installments(
             "Ya hay una carga de cuotas activa para este portafolio.",
         )
 
-    file_bytes = await file.read()
+    file_bytes = await read_within_limit(file, MAX_CSV_UPLOAD_BYTES)
     uploading_installments.add(portfolio_id)
     logger.info(
         "[installments] archivo leído | tamaño=%d bytes | portfolio=%s",

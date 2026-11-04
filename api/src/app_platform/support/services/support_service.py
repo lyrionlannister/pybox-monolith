@@ -872,12 +872,12 @@ class SupportService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Ticket no encontrado."
             )
 
-    _ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".doc", ".pdf"}
+    # Sin .doc: formato con macros que terminan abriendo los agentes de soporte.
+    _ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf"}
     _CONTENT_TYPE_BY_EXT = {
         ".jpg": "image/jpeg",
         ".jpeg": "image/jpeg",
         ".png": "image/png",
-        ".doc": "application/msword",
         ".pdf": "application/pdf",
     }
 
@@ -914,16 +914,10 @@ class SupportService:
                 )
             content = await read_within_limit(upload, MAX_DOCUMENT_SIZE_BYTES)
             safe_name = self._safe_filename(upload.filename)
-            # store_generated() está pensado para artefactos que genera la propia
-            # API, no para subidas de usuario — pero acá es seguro: el content-type
-            # no sale del header que manda el cliente, sale de la whitelist de
-            # extensión de arriba.
-            document = await self._document_service.store_generated(
+            document = await self._document_service.store_verified_upload(
                 content=content,
                 filename=safe_name,
-                content_type=self._CONTENT_TYPE_BY_EXT.get(
-                    ext, "application/octet-stream"
-                ),
+                content_type=self._CONTENT_TYPE_BY_EXT[ext],
                 domain=TICKET_DOCUMENT_STORAGE_DOMAIN,
                 owner_id=str(ticket.id),
                 uploaded_by=uploaded_by,
