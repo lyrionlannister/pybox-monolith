@@ -33,7 +33,7 @@ async def list_contact_policies(
         logger.error("[ivr] contact_policies_http_error | body=%s", detail)
         raise HTTPException(
             status.HTTP_502_BAD_GATEWAY,
-            f"Helena rechazó la consulta de políticas: {detail or exc}",
+            "Helena rechazó la consulta de políticas.",
         ) from exc
     except Exception as exc:  # pylint: disable=broad-exception-caught
         # Cualquier falla no-HTTP de Helena (timeout, conexión) también debe

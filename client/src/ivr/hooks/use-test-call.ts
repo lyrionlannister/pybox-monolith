@@ -12,6 +12,7 @@ export type TestCallParams = {
   redial: IvrRedial;
   amd: AmdVariables;
   phone: string;
+  portfolioId: string;
   customerName?: string;
   customerDocument?: string;
 };
@@ -44,6 +45,7 @@ export const useTestCall = () => {
           method: "POST",
           body: JSON.stringify({
             phone: params.phone,
+            portfolioId: params.portfolioId,
             config,
             variables: params.amd,
             customerName: params.customerName || null,

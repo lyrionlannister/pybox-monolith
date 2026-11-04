@@ -141,6 +141,7 @@ export const IvrDesignerPage: React.FC = () => {
       redial: flow.redial,
       amd: flow.amd,
       phone: data.phone,
+      portfolioId,
       customerName: data.customerName,
       customerDocument: data.customerDocument,
     });

@@ -41,6 +41,13 @@ class IvrFlowService:
             ).check_access,
         )
 
+    async def authorize_portfolio(
+        self, user_session: UserSession, portfolio_id: uuid.UUID
+    ) -> uuid.UUID:
+        """Mismo chequeo que el resto de operaciones de flujos (permiso de
+        comunicaciones + acceso al portafolio); devuelve la organización dueña."""
+        return await self._check_portfolio_access(user_session, portfolio_id)
+
     async def list_by_portfolio(
         self, portfolio_id: uuid.UUID, user_session: UserSession
     ) -> list[IvrFlowModel]:
