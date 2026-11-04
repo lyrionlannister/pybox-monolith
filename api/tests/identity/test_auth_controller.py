@@ -249,6 +249,26 @@ class TestRefresh:
         resp = await client.post(f"{BASE}/refresh", json={"refresh_token": "not-a-jwt"})
         assert resp.status_code in (400, 401)
 
+    async def test_refresh_token_is_rejected_as_access_token(self, client):
+        await client.post(f"{BASE}/register", json=register_payload())
+        refresh_token = client.cookies.get("refresh_token")
+        assert refresh_token
+        client.cookies.clear()
+        resp = await client.get(
+            "/api/v1/users/me", headers={"Authorization": f"Bearer {refresh_token}"}
+        )
+        assert resp.status_code == 401
+
+    async def test_access_token_is_rejected_as_refresh_token(self, client):
+        await client.post(f"{BASE}/register", json=register_payload())
+        access_token = client.cookies.get("access_token")
+        assert access_token
+        client.cookies.clear()
+        resp = await client.post(
+            f"{BASE}/refresh", json={"refresh_token": access_token}
+        )
+        assert resp.status_code in (400, 401)
+
 
 # ---------------------------------------------------------------------------
 # POST /logout, /logout/{user_id}

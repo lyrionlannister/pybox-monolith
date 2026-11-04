@@ -3,7 +3,6 @@
 import uuid
 from typing import cast
 
-import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app_platform.countries.enums.country_enums import DocumentScope
@@ -225,17 +224,10 @@ class AuthService:
 
     async def refresh_tokens(self, refresh_token: str) -> AuthResponse:
         try:
-            payload = jwt.decode(
-                refresh_token,
-                self.token_service.secret_key,
-                algorithms=[self.token_service.ALGORITHM],
-            )
-        except jwt.ExpiredSignatureError as e:
-            raise ValueError("El refresh token expiró.") from e
-        except jwt.InvalidTokenError as e:
-            raise ValueError("El refresh token no es válido.") from e
-
-        user_id = uuid.UUID(str(payload["sub"]))
+            payload = self.token_service.verify_refresh_token_jwt(refresh_token)
+            user_id = uuid.UUID(str(payload["sub"]))
+        except ValueError as e:
+            raise ValueError("El refresh token no es válido o expiró.") from e
         jti: str = payload["jti"]
 
         if not await self.token_service.verify_refresh_token(user_id, jti):
