@@ -1,4 +1,4 @@
-FROM docker.io/library/postgres:17-alpine
+FROM docker.io/library/postgres:18-alpine
 
 # POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD no se fijan aquí: son credenciales y
 # las inyecta docker-compose.yaml desde el .env raíz.
