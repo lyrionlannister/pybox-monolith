@@ -5,13 +5,15 @@ import { Spinner } from "@/ui/components/loader/spinner";
 import { Button } from "@/ui/components/button/button";
 import { getTicketDisplayId } from "@/support/utils/ticket-kanban-utils";
 import { useFileAvailability } from "@/support/hooks/use-file-availability";
+import { isTrustedFileUrl } from "@/support/utils/trusted-file-url";
 import type { SupportCaseType } from "@/types/support/support-types";
 
 const VIEWER_HEIGHT = "calc(100vh - 180px)";
 
 export const FileViewerPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const url = searchParams.get("url") ?? "";
+  const rawUrl = searchParams.get("url") ?? "";
+  const url = isTrustedFileUrl(rawUrl) ? rawUrl : "";
   const label = searchParams.get("label") ?? "Documento";
   const ticketId = searchParams.get("ticket");
   const caseType = searchParams.get("caseType") as SupportCaseType | null;
