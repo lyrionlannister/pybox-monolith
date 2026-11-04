@@ -7,7 +7,11 @@ import pytest
 from sqlalchemy import select
 
 from identity.auth.models.verification_code_model import VerificationCodeModel
-from identity.users.enums.user_enums import UserRole, UserScope
+from identity.users.enums.user_enums import (
+    IdentityVerificationStatus,
+    UserRole,
+    UserScope,
+)
 from messaging.providers.email_provider import NRS360EmailProvider
 from tests.factories import get_user_by_email, register_payload
 
@@ -178,3 +182,65 @@ class TestUpdateProfile:
             },
         )
         assert resp.status_code == 400
+
+    @pytest.mark.parametrize(
+        "status_value",
+        [IdentityVerificationStatus.PENDING, IdentityVerificationStatus.APPROVED],
+    )
+    async def test_cannot_change_document_after_identity_submitted(
+        self, onboarding_user, db_session, status_value
+    ):
+        authed, user, _payload = onboarding_user
+        original_hash = user.document_number_hash
+        user.identity_verification_status = status_value
+        await db_session.flush()
+        resp = await authed.patch(
+            f"{BASE}/profile",
+            json={
+                "document_type": "CC",
+                "document_number": str(uuid.uuid4().int)[:9],
+                "nationality": "CO",
+            },
+        )
+        assert resp.status_code == 409
+        await db_session.refresh(user)
+        assert user.document_number_hash == original_hash
+        assert user.identity_verification_status == status_value
+
+    async def test_document_of_another_user_returns_409(
+        self, client, onboarding_user, db_session
+    ):
+        authed, _user, _payload = onboarding_user
+        other_payload = register_payload()
+        resp = await client.post(f"{AUTH_BASE}/register/user", json=other_payload)
+        assert resp.status_code == 201
+        resp = await authed.patch(
+            f"{BASE}/profile",
+            json={
+                "document_type": other_payload["document_type"],
+                "document_number": other_payload["document_number"],
+                "nationality": "CO",
+            },
+        )
+        assert resp.status_code == 409
+
+    async def test_denied_identity_resets_to_not_submitted_on_change(
+        self, onboarding_user, db_session
+    ):
+        authed, user, _payload = onboarding_user
+        user.identity_verification_status = IdentityVerificationStatus.DENIED
+        await db_session.flush()
+        resp = await authed.patch(
+            f"{BASE}/profile",
+            json={
+                "document_type": "CC",
+                "document_number": str(uuid.uuid4().int)[:9],
+                "nationality": "CO",
+            },
+        )
+        assert resp.status_code == 204
+        await db_session.refresh(user)
+        assert (
+            user.identity_verification_status
+            == IdentityVerificationStatus.NOT_SUBMITTED
+        )

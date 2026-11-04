@@ -13,7 +13,11 @@ import pytest
 from fastapi import HTTPException
 
 from core.security.services.encrypt_service import encrypt_service
-from identity.users.enums.user_enums import UserRole, UserScope
+from identity.users.enums.user_enums import (
+    IdentityVerificationStatus,
+    UserRole,
+    UserScope,
+)
 from receivables.credits.repository.credit_repository import CreditRepository
 from receivables.debtors.repository.debtor_repository import DebtorRepository
 from receivables.payment_gateways.enums.payment_gateway_enums import (
@@ -60,6 +64,7 @@ def self_session(make_user_session_factory, document_number_hash: str):
         orgs={},
         document_type="CC",
         document_number_hash=document_number_hash,
+        identity_verification_status=IdentityVerificationStatus.APPROVED,
     )
 
 

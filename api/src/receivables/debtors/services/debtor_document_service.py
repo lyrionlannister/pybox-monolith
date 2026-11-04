@@ -11,8 +11,10 @@ from app_platform.documents.models.document_model import DocumentModel
 from app_platform.documents.schemas.document_schemas import DocumentCategoryOption
 from app_platform.documents.services.document_service import DocumentService
 from app_platform.documents.utils.document_naming import checksum as compute_checksum
-from core.security.policies.security_policies import get_self_identity
-from core.security.services.encrypt_service import encrypt_service
+from core.security.policies.security_policies import (
+    get_self_identity,
+    require_verified_identity,
+)
 from identity.users.schemas.user_session_schema import UserSession
 from receivables.debtors.enums.debtor_document_enums import (
     DEBTOR_DOCUMENT_CATEGORY_LABELS,
@@ -197,7 +199,8 @@ class DebtorDocumentService:
         """Resuelve las filas de deudor (una por empresa) detrás de la sesión SELF.
         El documento de identidad va cifrado en la tabla, así que la búsqueda es
         por hash."""
-        document_type, document_number = get_self_identity(session)
+        require_verified_identity(session)
+        document_type, document_number_hash = get_self_identity(session)
         try:
             doc_type = UserDocumentType(document_type)
         except ValueError as e:
@@ -206,7 +209,7 @@ class DebtorDocumentService:
             ) from e
 
         debtors = await self._debtor_repo.list_by_document(
-            doc_type, encrypt_service.hash_document(document_number)
+            doc_type, document_number_hash
         )
         if not debtors:
             raise HTTPException(

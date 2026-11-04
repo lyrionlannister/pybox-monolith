@@ -6,7 +6,7 @@ from typing import Awaitable, Callable, Protocol
 from fastapi import HTTPException, status
 
 from identity.organizations.enums.organization_enums import VerificationStatus
-from identity.users.enums.user_enums import UserRole
+from identity.users.enums.user_enums import IdentityVerificationStatus, UserRole
 from identity.users.schemas.user_session_schema import UserSession
 
 # Tupla (document_type, document_number_hash) usada para filtrar queries de deudores.
@@ -129,6 +129,20 @@ def require_self(session: UserSession) -> None:
     if not session.is_self:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "Solo el titular puede realizar esta acción"
+        )
+
+
+def require_verified_identity(session: UserSession) -> None:
+    """El titular SELF debe tener su identidad aprobada por Atención al Cliente.
+
+    Conocer el tipo+número de documento de alguien no es secreto, así que ser deudor
+    conocido no basta para operar sobre sus obligaciones (pagos, acuerdos,
+    documentos)."""
+    if session.identity_verification_status != IdentityVerificationStatus.APPROVED:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Verificación de identidad pendiente. Sube tu documento de "
+            "identidad para acceder a tu información crediticia.",
         )
 
 

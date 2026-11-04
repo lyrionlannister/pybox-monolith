@@ -303,16 +303,8 @@ class OnboardingService:
             country_code=nationality,
             required=True,
         )
-        user.document_type = data.document_type
-        user.document_number = (
-            encrypt_service.encrypt_to_str(data.document_number)
-            if data.document_number
-            else None
-        )
-        user.document_number_hash = (
-            encrypt_service.hash_document(data.document_number)
-            if data.document_number
-            else None
+        await self._user_service.apply_document_change(
+            user, data.document_type, data.document_number or "", by_self=True
         )
         user.nationality = data.nationality
         await self._user_repo.update(user)

@@ -14,7 +14,11 @@ import pytest
 from fastapi import HTTPException
 
 from core.security.services.encrypt_service import encrypt_service
-from identity.users.enums.user_enums import UserRole, UserScope
+from identity.users.enums.user_enums import (
+    IdentityVerificationStatus,
+    UserRole,
+    UserScope,
+)
 from receivables.credits.services.credit_selfservice_service import (
     CreditSelfServiceService,
 )
@@ -34,6 +38,7 @@ def self_session(make_user_session_factory, document_number_hash: str):
         orgs={},
         document_type="CC",
         document_number_hash=document_number_hash,
+        identity_verification_status=IdentityVerificationStatus.APPROVED,
     )
 
 

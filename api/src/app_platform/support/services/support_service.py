@@ -1042,7 +1042,13 @@ class SupportService:
         self, user_id: uuid.UUID, approved: bool
     ) -> None:
         user = await self._user_repo.get_by_id(user_id)
-        if user is None:
+        # Solo PENDING: si el documento cambió después de abrir el ticket, el estado
+        # ya se reinició (`UserService.apply_document_change`) y este ticket revisó
+        # otro documento, así que no debe aprobar el nuevo.
+        if (
+            user is None
+            or user.identity_verification_status != IdentityVerificationStatus.PENDING
+        ):
             return
         user.identity_verification_status = (
             IdentityVerificationStatus.APPROVED

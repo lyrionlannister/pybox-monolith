@@ -3,7 +3,11 @@ import uuid
 import pytest
 
 from core.database.redis import redis_client
-from identity.users.enums.user_enums import UserRole, UserScope
+from identity.users.enums.user_enums import (
+    IdentityVerificationStatus,
+    UserRole,
+    UserScope,
+)
 from identity.users.schemas.user_session_schema import session_key
 from tests.factories import get_user_by_email, mark_mfa_verified, register_payload
 
@@ -201,6 +205,65 @@ class TestUpdateUser:
         )
         assert resp.status_code == 200
         assert resp.json()["firstname"] == "Nuevo Nombre"
+
+    async def test_self_cannot_change_document_after_identity_approved(
+        self, auth_as, make_user_session_factory, real_user, db_session
+    ):
+        real_user.identity_verification_status = IdentityVerificationStatus.APPROVED
+        await db_session.flush()
+        original_hash = real_user.document_number_hash
+        authed = auth_as(
+            make_user_session_factory(
+                user_id=real_user.id, role=UserRole.USER, scope=UserScope.SELF
+            )
+        )
+        resp = await authed.patch(
+            f"{BASE}/{real_user.id}",
+            json={"document_type": "CC", "document_number": "998877665"},
+        )
+        assert resp.status_code == 409
+        await db_session.refresh(real_user)
+        assert real_user.document_number_hash == original_hash
+
+    async def test_self_unchanged_document_is_not_a_change(
+        self, auth_as, make_user_session_factory, real_user, db_session
+    ):
+        real_user.identity_verification_status = IdentityVerificationStatus.APPROVED
+        await db_session.flush()
+        authed = auth_as(
+            make_user_session_factory(
+                user_id=real_user.id, role=UserRole.USER, scope=UserScope.SELF
+            )
+        )
+        resp = await authed.patch(
+            f"{BASE}/{real_user.id}",
+            json={"firstname": "Ana", "document_type": real_user.document_type},
+        )
+        assert resp.status_code == 200
+        await db_session.refresh(real_user)
+        assert (
+            real_user.identity_verification_status
+            == IdentityVerificationStatus.APPROVED
+        )
+
+    async def test_admin_document_change_resets_identity_verification(
+        self, auth_as, make_user_session_factory, real_user, db_session
+    ):
+        real_user.identity_verification_status = IdentityVerificationStatus.APPROVED
+        await db_session.flush()
+        authed = auth_as(
+            make_user_session_factory(role=UserRole.ADMIN, scope=UserScope.GLOBAL)
+        )
+        resp = await authed.patch(
+            f"{BASE}/{real_user.id}",
+            json={"document_type": "CC", "document_number": "112233445"},
+        )
+        assert resp.status_code == 200
+        await db_session.refresh(real_user)
+        assert (
+            real_user.identity_verification_status
+            == IdentityVerificationStatus.NOT_SUBMITTED
+        )
 
     async def test_update_not_found_returns_404(
         self, auth_as, make_user_session_factory
