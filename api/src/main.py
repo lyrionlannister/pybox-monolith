@@ -14,7 +14,14 @@ from core.config.routers import register_routers
 from core.config.security_headers_middleware import SecurityHeadersMiddleware
 from core.tools.config_tools import get_or_throw
 
+# En producción no se publica el esquema OpenAPI ni la UI de docs: es un mapa
+# completo de endpoints y parámetros para quien explore la API.
+_IS_PRODUCTION = get_or_throw("ENV") == "production"
+
 app = FastAPI(
+    docs_url=None if _IS_PRODUCTION else "/docs",
+    redoc_url=None if _IS_PRODUCTION else "/redoc",
+    openapi_url=None if _IS_PRODUCTION else "/openapi.json",
     title="API de Gestión de Cartera",
     description=(
         "Plataforma de administración de portafolios, deudores, créditos y soporte."
