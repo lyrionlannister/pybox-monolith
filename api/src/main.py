@@ -9,6 +9,7 @@ from core.config.error_handlers import register_error_handlers
 from core.config.exception_response_middleware import ExceptionResponseMiddleware
 from core.config.lifespan import lifespan
 from core.config.logging_middleware import LoggingMiddleware
+from core.config.origin_check_middleware import OriginCheckMiddleware
 from core.config.routers import register_routers
 from core.config.security_headers_middleware import SecurityHeadersMiddleware
 from core.tools.config_tools import get_or_throw
@@ -28,6 +29,7 @@ app = FastAPI(
 # limpia solo hasta ServerErrorMiddleware (fuera de CORS) y el navegador descarta esa
 # respuesta por faltarle los headers de CORS (ver docstring de la clase).
 app.add_middleware(ExceptionResponseMiddleware)
+app.add_middleware(OriginCheckMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_or_throw("CORS_ORIGINS").split(","),
