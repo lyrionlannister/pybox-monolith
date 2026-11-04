@@ -7,7 +7,11 @@ from typing import Annotated
 from fastapi import HTTPException, Query, WebSocket, WebSocketDisconnect
 
 from core.config.api_router import APIRouter
-from core.security.dependencies import CurrentSession, get_ws_session
+from core.security.dependencies import (
+    CurrentSession,
+    WsSessionGuard,
+    get_ws_session,
+)
 from messaging.whatsapp.dependencies import WhatsAppChatServiceDep
 from messaging.whatsapp.schemas.whatsapp_chat_schemas import (
     WhatsAppChatAssignRequest,
@@ -95,9 +99,16 @@ async def whatsapp_chat_ws(ws: WebSocket, service: WhatsAppChatServiceDep):
         return
 
     await whatsapp_ws_manager.connect(session.user_id, ws)
+    guard = WsSessionGuard(session)
     try:
         while True:
             raw = await ws.receive_text()
+            try:
+                session = await guard.current()
+            except HTTPException:
+                await ws.close(code=1008)
+                break
+
             try:
                 msg = json.loads(raw)
                 event = msg.get("event")

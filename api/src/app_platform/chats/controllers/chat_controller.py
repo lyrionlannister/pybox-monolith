@@ -10,7 +10,7 @@ from app_platform.chats.dependencies import ChatServiceDep
 from app_platform.chats.websocket.connection_manager import ws_manager
 from core.config.api_router import APIRouter
 from core.config.logger import logger
-from core.security.dependencies import get_ws_session
+from core.security.dependencies import WsSessionGuard, get_ws_session
 
 router = APIRouter(prefix="/chats", tags=["Chats"])
 
@@ -26,6 +26,7 @@ async def chat_ws(ws: WebSocket, service: ChatServiceDep):
         return
 
     await ws_manager.connect(session.user_id, ws)
+    guard = WsSessionGuard(session)
     try:
         while True:
             try:
@@ -38,6 +39,12 @@ async def chat_ws(ws: WebSocket, service: ChatServiceDep):
                     await ws.close(code=1001)
                 except Exception:
                     pass
+                break
+
+            try:
+                session = await guard.current()
+            except HTTPException:
+                await ws.close(code=1008)
                 break
 
             try:
