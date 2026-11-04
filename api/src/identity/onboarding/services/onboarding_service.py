@@ -242,8 +242,17 @@ class OnboardingService:
         la verificación OTP, así que se aísla en un savepoint (begin_nested): si la
         propagación falla y envenena la transacción, solo se revierte el savepoint, no
         el OTP ya persistido.
+
+        Solo con la identidad aprobada: el documento lo declara el propio usuario, así
+        que antes de la aprobación cualquiera podría escribir el documento de otra
+        persona y quedar como contacto "verificado" de sus deudas (los contactos ya
+        verificados se propagan al aprobar la identidad, ver `SupportService`).
         """
-        if not user.document_type or not user.document_number_hash:
+        if (
+            not user.document_type
+            or not user.document_number_hash
+            or user.identity_verification_status != IdentityVerificationStatus.APPROVED
+        ):
             return
         if channel == VerificationChannel.EMAIL:
             contact_type = ContactMethodType.EMAIL

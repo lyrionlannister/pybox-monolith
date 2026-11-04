@@ -67,6 +67,7 @@ from app_platform.support.schemas.support_schemas import (
     UpdateTicketPrioritySchema,
     UpdateTicketStatusSchema,
 )
+from core.config.logger import logger
 from core.database.redis import redis_client
 from identity.organizations.enums.organization_enums import VerificationStatus
 from identity.organizations.repository.organization_membership_repository import (
@@ -76,11 +77,20 @@ from identity.organizations.repository.organization_repository import (
     OrganizationRepository,
 )
 from identity.users.enums.user_enums import IdentityVerificationStatus
+from identity.users.models.user_model import UserModel
 from identity.users.repository.user_repository import UserRepository
 from identity.users.schemas.user_session_schema import UserSession, session_key
+from receivables.contact_methods.enums.contact_method_enums import ContactMethodType
+from receivables.contact_methods.repository.contact_method_repository import (
+    ContactMethodRepository,
+)
+from receivables.contact_methods.services.self_service_contact_service import (
+    SelfServiceContactService,
+)
 from receivables.credits.services.credit_settlement_resolution_service import (
     CreditSettlementResolutionService,
 )
+from receivables.debtors.repository.debtor_repository import DebtorRepository
 from receivables.payments.services.payment_resolution_service import (
     PaymentResolutionService,
 )
@@ -91,6 +101,7 @@ from receivables.portfolios.repository.portfolio_user_access_repository import (
 
 class SupportService:
     def __init__(self, session: AsyncSession) -> None:
+        self._session = session
         self._ticket_repo = SupportTicketRepository(session)
         self._message_repo = SupportMessageRepository(session)
         self._event_repo = SupportEventRepository(session)
@@ -102,6 +113,9 @@ class SupportService:
         self._notification_service = NotificationService(session)
         self._document_service = DocumentService(session)
         self._user_repo = UserRepository(session)
+        self._self_service_contact_service = SelfServiceContactService(
+            session, DebtorRepository(session), ContactMethodRepository(session)
+        )
         # Los adjuntos cuelgan del ticket vía `documentos_ticket`: el filtro por
         # ticket lo hace este repo, no una columna polimórfica de `documentos`.
         self._ticket_document_repo = TicketDocumentRepository(session)
@@ -1038,6 +1052,38 @@ class SupportService:
                 category=NotificationCategory.ORG_VERIFICATION,
             )
 
+    async def _propagate_verified_contacts(self, user: UserModel) -> None:
+        """Registra el correo/teléfono ya verificados del titular como contactos de
+        sus filas de deudor, ahora que su identidad está aprobada (antes de eso
+        `OnboardingService._propagate_verified_contact` no propaga nada).
+
+        Aislado en un savepoint: un fallo aquí no debe revertir la aprobación."""
+        if not user.document_type or not user.document_number_hash:
+            return
+        verified = (
+            (ContactMethodType.EMAIL, user.email, user.is_email_verified),
+            (ContactMethodType.PHONE, user.phone_number, user.is_phone_verified),
+        )
+        for contact_type, value, is_verified in verified:
+            if not is_verified or not value:
+                continue
+            try:
+                async with self._session.begin_nested():
+                    await self._self_service_contact_service.register_verified_contact(
+                        document_type=user.document_type,
+                        document_number_hash=user.document_number_hash,
+                        contact_type=contact_type,
+                        contact_value=value,
+                        country_code=user.nationality,
+                    )
+            except Exception:
+                logger.warning(
+                    "[support] propagate_contact_failed | user_id=%s type=%s",
+                    user.id,
+                    contact_type.value,
+                    exc_info=True,
+                )
+
     async def _resolve_identity_verification(
         self, user_id: uuid.UUID, approved: bool
     ) -> None:
@@ -1056,6 +1102,8 @@ class SupportService:
             else IdentityVerificationStatus.DENIED
         )
         await self._user_repo.update(user)
+        if approved:
+            await self._propagate_verified_contacts(user)
 
         # La sesión (si sigue activa en Redis) se parchea en el momento para que el
         # titular vea el nuevo estado sin tener que volver a iniciar sesión — a

@@ -13,7 +13,10 @@ from identity.users.enums.user_enums import (
     UserScope,
 )
 from messaging.providers.email_provider import NRS360EmailProvider
+from receivables.contact_methods.enums.contact_method_enums import ContactMethodType
+from receivables.contact_methods.models.contact_method_model import ContactMethodModel
 from tests.factories import get_user_by_email, register_payload
+from tests.receivables.conftest import add_organization, build_debtor
 
 AUTH_BASE = "/api/v1/auth"
 BASE = "/api/v1/onboarding"
@@ -100,6 +103,55 @@ class TestVerifyOtp:
             f"{BASE}/verify-otp", json={"channel": "EMAIL", "code": code_row.code}
         )
         assert resp.status_code == 204
+
+    @pytest.mark.parametrize(
+        ("status_value", "expected_rows"),
+        [
+            (IdentityVerificationStatus.NOT_SUBMITTED, 0),
+            (IdentityVerificationStatus.PENDING, 0),
+            (IdentityVerificationStatus.APPROVED, 1),
+        ],
+    )
+    async def test_verified_email_propagates_only_with_approved_identity(
+        self, onboarding_user, db_session, status_value, expected_rows
+    ):
+        authed, user, payload = onboarding_user
+        org = await add_organization(db_session)
+        debtor = build_debtor(org.id, document_number_plain=payload["document_number"])
+        db_session.add(debtor)
+        user.identity_verification_status = status_value
+        await db_session.flush()
+
+        await authed.post(f"{BASE}/request-otp", json={"channel": "EMAIL"})
+        code_row = (
+            (
+                await db_session.execute(
+                    select(VerificationCodeModel)
+                    .where(VerificationCodeModel.user_id == user.id)
+                    .order_by(VerificationCodeModel.created_at.desc())
+                )
+            )
+            .scalars()
+            .first()
+        )
+        resp = await authed.post(
+            f"{BASE}/verify-otp", json={"channel": "EMAIL", "code": code_row.code}
+        )
+        assert resp.status_code == 204
+
+        rows = (
+            (
+                await db_session.execute(
+                    select(ContactMethodModel).where(
+                        ContactMethodModel.debtor_id == debtor.id,
+                        ContactMethodModel.contact_type == ContactMethodType.EMAIL,
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(rows) == expected_rows
 
     async def test_verify_otp_wrong_code_returns_400(self, onboarding_user):
         authed, _user, _payload = onboarding_user
