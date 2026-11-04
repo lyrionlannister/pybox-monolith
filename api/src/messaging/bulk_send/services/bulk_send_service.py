@@ -44,6 +44,9 @@ from messaging.whatsapp.services.whatsapp_number_request_service import (
 )
 from receivables.debtors.repository.debtor_repository import DebtorRepository
 from receivables.portfolios.repository.portfolio_repository import PortfolioRepository
+from receivables.portfolios.services.portfolio_user_access_service import (
+    PortfolioUserAccessService,
+)
 
 _RESERVED_COLS = {"tipo_documento", "documento", "destinatario"}
 
@@ -91,7 +94,12 @@ class BulkSendService:
     ) -> BulkSendResponse:
         portfolio = await self._portfolio_repo.get_by_id(portfolio_id)
         organization_id = await check_portfolio_org_access(
-            user_session, portfolio, PORTFOLIO_COMMUNICATIONS
+            user_session,
+            portfolio,
+            PORTFOLIO_COMMUNICATIONS,
+            check_access=PortfolioUserAccessService(
+                self._portfolio_repo.session
+            ).check_access,
         )
 
         if await self._billing_status_service.is_blocked(organization_id):

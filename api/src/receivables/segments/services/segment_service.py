@@ -47,6 +47,9 @@ from receivables.segments.schemas.segment_schemas import (
     SegmentResponse,
     SegmentUpdateRequest,
 )
+from receivables.portfolios.services.portfolio_user_access_service import (
+    PortfolioUserAccessService,
+)
 
 _segment_list_adapter: TypeAdapter[list[SegmentResponse]] = TypeAdapter(
     list[SegmentResponse]
@@ -77,7 +80,12 @@ class SegmentService:
     ) -> None:
         portfolio = await self._portfolio_repo.get_by_id(portfolio_id)
         await check_portfolio_org_access(
-            user_session, portfolio, PORTFOLIO_COMMUNICATIONS
+            user_session,
+            portfolio,
+            PORTFOLIO_COMMUNICATIONS,
+            check_access=PortfolioUserAccessService(
+                self._portfolio_repo.session
+            ).check_access,
         )
 
     async def create(

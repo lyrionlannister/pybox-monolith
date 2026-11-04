@@ -36,6 +36,9 @@ from messaging.whatsapp.services.whatsapp_number_request_service import (
 )
 from receivables.portfolios.repository.portfolio_repository import PortfolioRepository
 from receivables.segments.repository.segment_repository import SegmentRepository
+from receivables.portfolios.services.portfolio_user_access_service import (
+    PortfolioUserAccessService,
+)
 
 _RECURRING = (Periodicity.DAILY, Periodicity.WEEKLY, Periodicity.MONTHLY)
 
@@ -70,7 +73,12 @@ class CampaignService:
     ) -> uuid.UUID:
         portfolio = await self._portfolio_repo.get_by_id(portfolio_id)
         return await check_portfolio_org_access(
-            user_session, portfolio, PORTFOLIO_COMMUNICATIONS
+            user_session,
+            portfolio,
+            PORTFOLIO_COMMUNICATIONS,
+            check_access=PortfolioUserAccessService(
+                self._portfolio_repo.session
+            ).check_access,
         )
 
     async def list_by_org(

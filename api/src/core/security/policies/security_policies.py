@@ -15,6 +15,7 @@ SelfIdentity = tuple[str, str]
 
 
 class _OwnedByOrganization(Protocol):
+    id: uuid.UUID
     organization_id: uuid.UUID
 
 
@@ -159,18 +160,22 @@ async def check_portfolio_org_access(
     user_session: UserSession,
     portfolio: _OwnedByOrganization | None,
     permission: str,
+    *,
+    check_access: Callable[[uuid.UUID, uuid.UUID, str], Awaitable[bool]],
 ) -> uuid.UUID:
-    """Valida que el portafolio exista y que el usuario tenga el permiso indicado
-    sobre la organización dueña. Usado por los módulos que operan "dentro" de un
-    portafolio (campañas, plantillas, segmentos) para no duplicar esta lógica.
+    """Valida que el portafolio exista, que el usuario tenga el permiso indicado
+    sobre la organización dueña y que tenga acceso a ESE portafolio (un miembro no
+    admin necesita concesión explícita, ver `require_portfolio_access`). Usado por
+    los módulos que operan "dentro" de un portafolio (campañas, plantillas,
+    segmentos, deudores, ...) para no duplicar esta lógica.
     """
     if portfolio is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Portafolio no encontrado")
     if not user_session.is_global:
-        require_org_visibility(
-            user_session, str(portfolio.organization_id), "Portafolio no encontrado"
-        )
-        require_permission(permission, user_session, str(portfolio.organization_id))
+        org_id = str(portfolio.organization_id)
+        require_org_visibility(user_session, org_id, "Portafolio no encontrado")
+        require_permission(permission, user_session, org_id)
+        await require_portfolio_access(user_session, org_id, portfolio.id, check_access)
     return portfolio.organization_id
 
 

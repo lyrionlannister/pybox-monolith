@@ -27,6 +27,9 @@ from messaging.ivr.schemas.ivr_monitor_schemas import (
     IvrSnapshotSchema,
 )
 from receivables.portfolios.repository.portfolio_repository import PortfolioRepository
+from receivables.portfolios.services.portfolio_user_access_service import (
+    PortfolioUserAccessService,
+)
 
 #: Ventana durante la cual una llamada ya terminada sigue apareciendo en el
 #: snapshot, para que al recargar no desaparezcan de golpe los resultados que
@@ -53,7 +56,12 @@ class IvrMonitorService:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Campaña no encontrada")
         portfolio = await self._portfolios.get_by_id(campaign.portfolio_id)
         await check_portfolio_org_access(
-            user_session, portfolio, PORTFOLIO_COMMUNICATIONS
+            user_session,
+            portfolio,
+            PORTFOLIO_COMMUNICATIONS,
+            check_access=PortfolioUserAccessService(
+                self._portfolios.session
+            ).check_access,
         )
         return campaign
 

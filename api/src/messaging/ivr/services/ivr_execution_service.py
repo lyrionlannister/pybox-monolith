@@ -30,6 +30,9 @@ from messaging.ivr.enums.ivr_enums import (
 from messaging.ivr.models.ivr_execution_model import IvrExecutionModel
 from messaging.ivr.repository.ivr_execution_repository import IvrExecutionRepository
 from receivables.portfolios.repository.portfolio_repository import PortfolioRepository
+from receivables.portfolios.services.portfolio_user_access_service import (
+    PortfolioUserAccessService,
+)
 
 
 class IvrExecutionService:
@@ -59,7 +62,12 @@ class IvrExecutionService:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Campaña no encontrada")
         portfolio = await self._portfolios.get_by_id(campaign.portfolio_id)
         await check_portfolio_org_access(
-            user_session, portfolio, PORTFOLIO_COMMUNICATIONS
+            user_session,
+            portfolio,
+            PORTFOLIO_COMMUNICATIONS,
+            check_access=PortfolioUserAccessService(
+                self._portfolios.session
+            ).check_access,
         )
         return execution
 
@@ -71,7 +79,12 @@ class IvrExecutionService:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Campaña no encontrada")
         portfolio = await self._portfolios.get_by_id(campaign.portfolio_id)
         await check_portfolio_org_access(
-            user_session, portfolio, PORTFOLIO_COMMUNICATIONS
+            user_session,
+            portfolio,
+            PORTFOLIO_COMMUNICATIONS,
+            check_access=PortfolioUserAccessService(
+                self._portfolios.session
+            ).check_access,
         )
 
     # ── Lectura ───────────────────────────────────────────────────────────────

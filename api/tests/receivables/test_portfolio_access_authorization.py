@@ -143,6 +143,10 @@ async def member_b_id(client, db_session, org_b):
     return user_id
 
 
+async def _deny_all(_user_id, _portfolio_id, _org_id) -> bool:
+    return False
+
+
 class TestMemberPortfolioAccess:
     async def test_admin_cannot_revoke_access_on_another_organizations_portfolio(
         self,
@@ -324,7 +328,9 @@ class TestForeignPortfolioIsNotFound:
         )
 
         with pytest.raises(HTTPException) as exc:
-            await check_portfolio_org_access(session, portfolio_b, PORTFOLIO_CLIENTS)
+            await check_portfolio_org_access(
+                session, portfolio_b, PORTFOLIO_CLIENTS, check_access=_deny_all
+            )
 
         assert exc.value.status_code == 404
 
@@ -336,7 +342,9 @@ class TestForeignPortfolioIsNotFound:
         )
 
         with pytest.raises(HTTPException) as exc:
-            await check_portfolio_org_access(session, portfolio_a, PORTFOLIO_CLIENTS)
+            await check_portfolio_org_access(
+                session, portfolio_a, PORTFOLIO_CLIENTS, check_access=_deny_all
+            )
 
         assert exc.value.status_code == 403
 

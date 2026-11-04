@@ -26,6 +26,9 @@ from messaging.templates.schemas.template_schemas import (
 )
 from messaging.templates.services.template_renderer import TemplateRenderer
 from receivables.portfolios.repository.portfolio_repository import PortfolioRepository
+from receivables.portfolios.services.portfolio_user_access_service import (
+    PortfolioUserAccessService,
+)
 
 # Módulo-nivel, igual que en automation_service.py: un solo dispatcher compartido,
 # no uno por instancia de servicio (cada canal mantiene su propio cliente HTTP).
@@ -50,7 +53,12 @@ class TemplateService:
     ) -> None:
         portfolio = await self._portfolio_repo.get_by_id(portfolio_id)
         await check_portfolio_org_access(
-            user_session, portfolio, PORTFOLIO_COMMUNICATIONS
+            user_session,
+            portfolio,
+            PORTFOLIO_COMMUNICATIONS,
+            check_access=PortfolioUserAccessService(
+                self._portfolio_repo.session
+            ).check_access,
         )
 
     async def list_by_org(

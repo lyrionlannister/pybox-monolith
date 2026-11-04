@@ -37,7 +37,16 @@ def _session(**overrides) -> UserSession:
 
 class _FakePortfolio:
     def __init__(self, organization_id: uuid.UUID) -> None:
+        self.id = uuid.uuid4()
         self.organization_id = organization_id
+
+
+async def _granted(_user_id, _portfolio_id, _org_id) -> bool:
+    return True
+
+
+async def _not_granted(_user_id, _portfolio_id, _org_id) -> bool:
+    return False
 
 
 class TestRequireGlobal:
@@ -297,14 +306,20 @@ class TestCheckPortfolioOrgAccess:
     async def test_missing_portfolio_raises_404(self):
         with pytest.raises(HTTPException) as exc:
             await check_portfolio_org_access(
-                _session(scope=UserScope.GLOBAL), None, "portfolio.view"
+                _session(scope=UserScope.GLOBAL),
+                None,
+                "portfolio.view",
+                check_access=_granted,
             )
         assert exc.value.status_code == 404
 
     async def test_global_session_bypasses_permission(self):
         org_id = uuid.uuid4()
         result = await check_portfolio_org_access(
-            _session(scope=UserScope.GLOBAL), _FakePortfolio(org_id), "portfolio.view"
+            _session(scope=UserScope.GLOBAL),
+            _FakePortfolio(org_id),
+            "portfolio.view",
+            check_access=_not_granted,
         )
         assert result == org_id
 
@@ -316,8 +331,52 @@ class TestCheckPortfolioOrgAccess:
         )
         with pytest.raises(HTTPException):
             await check_portfolio_org_access(
-                session, _FakePortfolio(org_id), "portfolio.view"
+                session,
+                _FakePortfolio(org_id),
+                "portfolio.view",
+                check_access=_granted,
             )
+
+    async def test_member_with_permission_but_no_grant_raises_403(self):
+        org_id = uuid.uuid4()
+        session = _session(
+            scope=UserScope.ORGANIZATION,
+            orgs={
+                str(org_id): OrgSessionEntry(
+                    role=UserRole.USER,
+                    org_name="Org",
+                    permissions=frozenset({"portfolio.view"}),
+                )
+            },
+        )
+        with pytest.raises(HTTPException) as exc:
+            await check_portfolio_org_access(
+                session,
+                _FakePortfolio(org_id),
+                "portfolio.view",
+                check_access=_not_granted,
+            )
+        assert exc.value.status_code == 403
+
+    async def test_member_with_permission_and_grant_passes(self):
+        org_id = uuid.uuid4()
+        session = _session(
+            scope=UserScope.ORGANIZATION,
+            orgs={
+                str(org_id): OrgSessionEntry(
+                    role=UserRole.USER,
+                    org_name="Org",
+                    permissions=frozenset({"portfolio.view"}),
+                )
+            },
+        )
+        result = await check_portfolio_org_access(
+            session,
+            _FakePortfolio(org_id),
+            "portfolio.view",
+            check_access=_granted,
+        )
+        assert result == org_id
 
 
 class TestRequirePortfolioAccess:

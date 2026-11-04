@@ -55,7 +55,7 @@ def build_service(db_session) -> DebtorService:
 
 
 def org_session(
-    make_user_session_factory, org_id: uuid.UUID, *, role: UserRole = UserRole.USER
+    make_user_session_factory, org_id: uuid.UUID, *, role: UserRole = UserRole.ADMIN
 ) -> UserSession:
     """Sesión org-scoped con permiso `portfolio.clients` sobre `org_id` -- el mínimo
     necesario para pasar `_check_portfolio_access` de un portafolio de esa org."""
