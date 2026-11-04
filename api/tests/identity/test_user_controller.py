@@ -9,7 +9,12 @@ from identity.users.enums.user_enums import (
     UserScope,
 )
 from identity.users.schemas.user_session_schema import session_key
-from tests.factories import get_user_by_email, mark_mfa_verified, register_payload
+from tests.factories import (
+    STRONG_PASSWORD,
+    get_user_by_email,
+    mark_mfa_verified,
+    register_payload,
+)
 
 AUTH_BASE = "/api/v1/auth"
 BASE = "/api/v1/users"
@@ -338,4 +343,62 @@ class TestDeleteUser:
             make_user_session_factory(role=UserRole.USER, scope=UserScope.SELF)
         )
         resp = await authed.delete(f"{BASE}/{real_user.id}")
+        assert resp.status_code == 403
+
+
+class TestSelfSensitiveChanges:
+    """Con una sesión robada no debe poder cambiarse el correo (destino de la
+    recuperación de contraseña) ni desactivarse el MFA sin la contraseña actual."""
+
+    def _self(self, auth_as, make_user_session_factory, user):
+        return auth_as(
+            make_user_session_factory(
+                user_id=user.id, role=UserRole.USER, scope=UserScope.SELF
+            )
+        )
+
+    async def test_email_change_without_password_is_rejected(
+        self, auth_as, make_user_session_factory, real_user
+    ):
+        authed = self._self(auth_as, make_user_session_factory, real_user)
+        resp = await authed.patch(
+            f"{BASE}/{real_user.id}", json={"email": f"{uuid.uuid4()}@example.com"}
+        )
+        assert resp.status_code == 403
+
+    async def test_email_change_with_password_marks_it_unverified(
+        self, auth_as, make_user_session_factory, real_user, db_session
+    ):
+        real_user.is_email_verified = True
+        await db_session.flush()
+        authed = self._self(auth_as, make_user_session_factory, real_user)
+        new_email = f"{uuid.uuid4()}@example.com"
+        resp = await authed.patch(
+            f"{BASE}/{real_user.id}",
+            json={"email": new_email, "currentPassword": STRONG_PASSWORD},
+        )
+        assert resp.status_code == 200
+        await db_session.refresh(real_user)
+        assert real_user.email == new_email
+        assert real_user.is_email_verified is False
+
+    async def test_disabling_mfa_requires_password(
+        self, auth_as, make_user_session_factory, real_user, db_session
+    ):
+        real_user.mfa_enabled = True
+        await db_session.flush()
+        authed = self._self(auth_as, make_user_session_factory, real_user)
+        resp = await authed.patch(f"{BASE}/{real_user.id}", json={"mfaEnabled": False})
+        assert resp.status_code == 403
+        ok = await authed.patch(
+            f"{BASE}/{real_user.id}",
+            json={"mfaEnabled": False, "currentPassword": STRONG_PASSWORD},
+        )
+        assert ok.status_code == 200
+
+    async def test_cannot_deactivate_own_account(
+        self, auth_as, make_user_session_factory, real_user
+    ):
+        authed = self._self(auth_as, make_user_session_factory, real_user)
+        resp = await authed.patch(f"{BASE}/{real_user.id}", json={"isActive": False})
         assert resp.status_code == 403

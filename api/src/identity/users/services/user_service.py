@@ -17,6 +17,7 @@ from core.security.constants.permissions import ORG_USERS
 from core.security.constants.role_permissions_catalog import get_base_permissions
 from core.security.services.auth_token_service import AuthTokenService
 from core.security.services.encrypt_service import encrypt_service
+from core.security.services.password_hasher_service import PasswordHasherService
 from identity.organizations.repository.organization_membership_repository import (
     OrganizationMembershipRepository,
 )
@@ -82,6 +83,10 @@ class UserService:
         self._redis = redis
         self._country_service = CountryService(CountryRepository(user_repo.session))
         self._document_service = DocumentService(user_repo.session)
+
+    @property
+    def _password_hasher(self) -> PasswordHasherService:
+        return PasswordHasherService()
 
     @property
     def redis(self) -> RedisClient:
@@ -417,6 +422,8 @@ class UserService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado."
             )
+        if user_id == session.user_id:
+            self._assert_self_sensitive_change_allowed(user, data)
         if data.firstname is not None:
             user.firstname = data.firstname
         if data.lastname is not None:
@@ -429,6 +436,9 @@ class UserService:
                     detail="Ya existe un usuario con ese correo electrónico.",
                 )
             user.email = data.email
+            if user_id == session.user_id:
+                # El correo nuevo no está verificado: el onboarding vuelve a pedirlo.
+                user.is_email_verified = False
         if data.phone_number is not None and data.phone_number != user.phone_number:
             existing = await self.user_repo.get_by_phone_number(data.phone_number)
             if existing is not None and existing.id != user.id:
@@ -459,6 +469,39 @@ class UserService:
         elif document_changed:
             await self.get_user_session(user_id)
         return await self.get_user_detail(session, user_id)
+
+    def _assert_self_sensitive_change_allowed(
+        self, user: UserModel, data: UpdateUserSchema
+    ) -> None:
+        """Cambios sobre la propia cuenta que permitirían conservarla con una sesión
+        robada: cambiar el correo (destino de la recuperación de contraseña) o
+        desactivar el MFA exigen la contraseña actual; desactivarse a uno mismo no
+        se permite desde aquí."""
+        if data.is_active is not None and data.is_active != user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No puedes cambiar el estado de tu propia cuenta.",
+            )
+        changes_email = data.email is not None and data.email != user.email
+        disables_mfa = data.mfa_enabled is False and bool(user.mfa_enabled)
+        if not (changes_email or disables_mfa):
+            return
+        stored_hash = user.hashed_password
+        if not stored_hash:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "Tu cuenta usa un proveedor externo: contacta a soporte para "
+                    "este cambio."
+                ),
+            )
+        if not data.current_password or not self._password_hasher.verify_password(
+            stored_hash, data.current_password
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Confirma tu contraseña actual para este cambio.",
+            )
 
     async def apply_document_change(
         self,
