@@ -69,7 +69,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Misma versión que ci.yml / client/Dockerfile.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           version: 11.10.0
       - uses: actions/setup-node@v4
