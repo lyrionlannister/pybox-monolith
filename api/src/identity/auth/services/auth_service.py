@@ -327,6 +327,16 @@ class AuthService:
     async def _build_response(
         self, user: UserModel, auth_provider: AuthProvider, *, new_login: bool = True
     ) -> AuthResponse:
+        """Emite los tokens de una sesión nueva o renovada.
+
+        Es el punto único por el que pasan login, OAuth y refresh, así que aquí se
+        rechaza al usuario desactivado (con el mismo mensaje que credenciales
+        inválidas, para no confirmar que la cuenta existe)."""
+        if not user.is_active:
+            logger.warning(
+                "[auth] login_rejected | user_id=%s reason=inactive", user.id
+            )
+            raise ValueError("Credenciales inválidas.")
         setattr(user, "is_active_sessions", True)
         await self.user_repository.update(user)
         if new_login:

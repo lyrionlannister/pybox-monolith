@@ -125,6 +125,20 @@ class TestLogin:
         )
         assert resp.status_code == 400
 
+    async def test_login_inactive_user_returns_400(self, client, db_session):
+        payload = register_payload()
+        await client.post(f"{BASE}/register", json=payload)
+        user = await get_user_by_email(db_session, payload["email"])
+        user.is_active = False
+        await db_session.flush()
+        client.cookies.clear()
+        resp = await client.post(
+            f"{BASE}/login",
+            json={"email": payload["email"], "password": payload["password"]},
+        )
+        assert resp.status_code == 400
+        assert "access_token" not in resp.cookies
+
     async def test_login_invalid_body_returns_422(self, client):
         resp = await client.post(f"{BASE}/login", json={"email": "not-an-email"})
         assert resp.status_code == 422
