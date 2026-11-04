@@ -508,6 +508,7 @@ class SupportService:
                 status_code=status.HTTP_403_FORBIDDEN, detail="Acceso denegado."
             )
         ticket = await self._get_ticket_or_404(ticket_number)
+        self._assert_ticket_access(ticket, f)
         if ticket.system_topic != RequirementTopic.DOCUMENT_VALIDATION.value:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -680,7 +681,10 @@ class SupportService:
 
     async def get_metrics(self, f: SupportFilter) -> TicketMetricsSchema:
         tickets = await self._ticket_repo.get_metrics_data(
-            org_ids=f.org_ids, created_by=f.created_by
+            org_ids=f.org_ids,
+            created_by=f.created_by,
+            staff_org_ids=f.staff_org_ids,
+            viewer_id=f.viewer_id,
         )
         today = datetime.now(timezone.utc).date()
 
@@ -852,6 +856,17 @@ class SupportService:
             check_creator
             and f.created_by is not None
             and ticket.created_by != f.created_by
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Ticket no encontrado."
+            )
+        # Fuera de sus organizaciones de staff, solo el propio ticket y solo para las
+        # operaciones de lectura/conversación (check_creator); las de staff
+        # (resolver, asignar, escalar, cerrar) no.
+        if (
+            f.staff_org_ids is not None
+            and ticket.organization_id not in f.staff_org_ids
+            and not (check_creator and ticket.created_by == f.viewer_id)
         ):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Ticket no encontrado."

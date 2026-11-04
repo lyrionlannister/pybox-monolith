@@ -24,6 +24,11 @@ class SupportFilter:
     # Access control
     org_ids: list[uuid.UUID] | None = None
     created_by: uuid.UUID | None = None
+    # Usuario staff (admin/CS) en unas organizaciones y miembro raso en otras: sus
+    # capacidades de staff solo valen en `staff_org_ids`; en el resto solo ve sus
+    # propios tickets (`viewer_id`). None = sin esa restricción.
+    staff_org_ids: list[uuid.UUID] | None = None
+    viewer_id: uuid.UUID | None = None
     include_resolved: bool = False
     can_resolve: bool = False
     can_assign: bool = False

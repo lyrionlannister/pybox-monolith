@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from app_platform.support.models.support_ticket_model import SupportTicketModel
 from identity.users.enums.user_enums import UserRole, UserScope
+from identity.users.schemas.user_session_schema import OrgSessionEntry
 from tests.factories import get_user_by_email, register_payload
 
 AUTH_BASE = "/api/v1/auth"
@@ -295,6 +296,74 @@ class TestOrgDocs:
     ):
         resp = await authed_global_admin.get(f"{BASE}/{real_ticket_number}/org-docs")
         assert resp.status_code == 400
+
+
+async def _org_verification_ticket(authed_global_admin, db_session):
+    create_org = await authed_global_admin.post(
+        f"{ORG_BASE}/",
+        json={"name": f"Org {uuid.uuid4().hex[:8]}", "sector": "FINTECH"},
+    )
+    org_id = create_org.json()["id"]
+    await authed_global_admin.post(f"{ORG_BASE}/{org_id}/request-verification")
+    ticket = (
+        (
+            await db_session.execute(
+                select(SupportTicketModel).where(
+                    SupportTicketModel.organization_id == uuid.UUID(org_id)
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return org_id, ticket
+
+
+class TestCrossOrgStaffAccess:
+    async def test_org_docs_of_another_org_returns_404(
+        self, db_session, authed_global_admin, auth_as, make_user_session_factory
+    ):
+        _org_id, ticket = await _org_verification_ticket(
+            authed_global_admin, db_session
+        )
+        other_admin = auth_as(
+            make_user_session_factory(
+                role=None,
+                scope=UserScope.ORGANIZATION,
+                orgs={
+                    str(uuid.uuid4()): OrgSessionEntry(
+                        role=UserRole.ADMIN, org_name="Otra"
+                    )
+                },
+            )
+        )
+        resp = await other_admin.get(f"{BASE}/{ticket.ticket_number}/org-docs")
+        assert resp.status_code == 404
+
+    async def test_staff_role_in_one_org_does_not_apply_to_another(
+        self, db_session, authed_global_admin, auth_as, make_user_session_factory
+    ):
+        org_id, ticket = await _org_verification_ticket(authed_global_admin, db_session)
+        mixed = auth_as(
+            make_user_session_factory(
+                role=None,
+                scope=UserScope.ORGANIZATION,
+                orgs={
+                    str(uuid.uuid4()): OrgSessionEntry(
+                        role=UserRole.CUSTOMER_SERVICE, org_name="Donde soy CS"
+                    ),
+                    org_id: OrgSessionEntry(role=UserRole.USER, org_name="Donde no"),
+                },
+            )
+        )
+        resolve = await mixed.post(
+            f"{BASE}/{ticket.ticket_number}/resolve",
+            json={"approved": True, "notes": "x"},
+        )
+        assert resolve.status_code == 404
+        listed = await mixed.get(BASE)
+        assert listed.status_code == 200
+        assert ticket.ticket_number not in {t["ticketNumber"] for t in listed.json()}
 
 
 class TestEvents:
