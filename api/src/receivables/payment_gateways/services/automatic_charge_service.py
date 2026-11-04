@@ -115,6 +115,7 @@ class AutomaticChargeService:
             )
 
         tokens = await gateway.get_acceptance_tokens()
+        await self._payment_repo.lock_for_charge(payment.id)
         latest_attempt = await self._attempt_repo.get_latest_by_payment_id(
             payment.id, for_update=True
         )
