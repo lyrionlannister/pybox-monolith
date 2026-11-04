@@ -23,6 +23,7 @@ from core.security.policies.security_policies import (
     check_portfolio_org_access,
     has_permission,
 )
+from core.tools.csv_tools import neutralize_formulas
 from identity.users.schemas.user_session_schema import UserSession
 from receivables.portfolios.enums.portfolio_document_enums import (
     PortfolioDocumentCategory,
@@ -288,7 +289,7 @@ class SegmentService:
         if portfolio is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Portafolio no encontrado")
         document = await self._document_service.store_generated(
-            content=df.write_csv().encode("utf-8"),
+            content=neutralize_formulas(df).write_csv().encode("utf-8"),
             filename=file_name,
             content_type=CSV_CONTENT_TYPE,
             domain=PORTFOLIO_DOCUMENT_STORAGE_DOMAIN,
