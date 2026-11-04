@@ -139,7 +139,7 @@ class TestCreate:
             await service.create(session, payload)
         assert exc_info.value.status_code == 404
 
-    async def test_without_permission_raises_403(
+    async def test_outside_org_raises_404(
         self, db_session, make_user_session_factory, org_portfolio_credit
     ):
         _, _, _, credit, _ = org_portfolio_credit
@@ -150,7 +150,7 @@ class TestCreate:
         )
         with pytest.raises(HTTPException) as exc_info:
             await service.create(session, payload)
-        assert exc_info.value.status_code == 403
+        assert exc_info.value.status_code == 404
 
     async def test_creates_and_notifies_debtor_with_matching_account(
         self,
@@ -265,7 +265,7 @@ class TestListByCredit:
             await service.list_by_credit(session, uuid.uuid4())
         assert exc_info.value.status_code == 404
 
-    async def test_without_permission_raises_403(
+    async def test_outside_org_raises_404(
         self, db_session, make_user_session_factory, org_portfolio_credit
     ):
         _, _, _, credit, _ = org_portfolio_credit
@@ -273,7 +273,7 @@ class TestListByCredit:
         session = no_access_session(make_user_session_factory)
         with pytest.raises(HTTPException) as exc_info:
             await service.list_by_credit(session, credit.id)
-        assert exc_info.value.status_code == 403
+        assert exc_info.value.status_code == 404
 
     async def test_lists_notifications_for_credit(
         self,
@@ -336,7 +336,7 @@ class TestUploadAttachments:
             )
         assert exc_info.value.status_code == 404
 
-    async def test_without_permission_raises_403(
+    async def test_outside_org_raises_404(
         self,
         db_session,
         make_user_session_factory,
@@ -362,7 +362,7 @@ class TestUploadAttachments:
             await service.upload_attachments(
                 no_access, created.id, [make_upload_file(b"x", "orden.pdf")]
             )
-        assert exc_info.value.status_code == 403
+        assert exc_info.value.status_code == 404
 
     async def test_disallowed_extension_raises_415(
         self,
@@ -493,7 +493,7 @@ class TestGetAttachmentContent:
         )
         assert response.status_code == 200
 
-    async def test_entity_without_permission_raises_403(
+    async def test_entity_outside_org_raises_404(
         self,
         db_session,
         make_user_session_factory,
@@ -522,7 +522,7 @@ class TestGetAttachmentContent:
         no_access = no_access_session(make_user_session_factory)
         with pytest.raises(HTTPException) as exc_info:
             await service.get_attachment_content(no_access, created.id, document_id)
-        assert exc_info.value.status_code == 403
+        assert exc_info.value.status_code == 404
 
     async def test_debtor_owner_downloads(
         self,
