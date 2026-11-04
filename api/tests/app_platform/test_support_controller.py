@@ -419,7 +419,9 @@ class TestAttachments:
     async def test_upload_and_list_valid(self, authed_global_admin, real_ticket_number):
         upload = await authed_global_admin.post(
             f"{BASE}/{real_ticket_number}/attachments",
-            files={"files": ("evidencia.png", b"\x89PNG\r\n\x1a\n fake bytes", "image/png")},
+            files={
+                "files": ("evidencia.png", b"\x89PNG\r\n\x1a\n fake bytes", "image/png")
+            },
         )
         assert upload.status_code == 200
         assert len(upload.json()) == 1
@@ -460,7 +462,9 @@ class TestAttachments:
     async def test_get_content_valid(self, authed_global_admin, real_ticket_number):
         upload = await authed_global_admin.post(
             f"{BASE}/{real_ticket_number}/attachments",
-            files={"files": ("evidencia.png", b"\x89PNG\r\n\x1a\n fake bytes", "image/png")},
+            files={
+                "files": ("evidencia.png", b"\x89PNG\r\n\x1a\n fake bytes", "image/png")
+            },
         )
         document_id = upload.json()[0]["url"].rsplit("/", 2)[1]
         resp = await authed_global_admin.get(

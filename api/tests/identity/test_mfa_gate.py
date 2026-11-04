@@ -5,7 +5,7 @@ from core.security.constants.cookie_constants import (
     REFRESH_TOKEN_COOKIE,
 )
 from identity.auth.models.verification_code_model import VerificationCodeModel
-from tests.factories import get_user_by_email, register_payload
+from tests.factories import TEST_OTP_CODE, get_user_by_email, register_payload
 
 AUTH_BASE = "/api/v1/auth"
 ONBOARDING_BASE = "/api/v1/onboarding"
@@ -24,7 +24,8 @@ async def _fetch_otp_code(db_session, user_id) -> str:
         .scalars()
         .first()
     )
-    return row.code
+    assert row is not None
+    return TEST_OTP_CODE
 
 
 async def _register(client, db_session):

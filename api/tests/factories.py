@@ -55,3 +55,8 @@ async def mark_mfa_verified(user_id: uuid.UUID) -> None:
     inmediato a endpoints de negocio (`CurrentSession`) necesita esto, igual que en
     producción necesitaría completar el paso de OTP tras el login."""
     await redis_client.set(mfa_verified_key(user_id), "1", 3600)
+
+
+# OTP fijo en tests (ver fixture `deterministic_otp` en conftest): la tabla solo
+# guarda el HMAC del código, así que los tests no pueden leerlo de la base.
+TEST_OTP_CODE = "246810"

@@ -15,7 +15,7 @@ from identity.users.enums.user_enums import (
 from messaging.providers.email_provider import NRS360EmailProvider
 from receivables.contact_methods.enums.contact_method_enums import ContactMethodType
 from receivables.contact_methods.models.contact_method_model import ContactMethodModel
-from tests.factories import get_user_by_email, register_payload
+from tests.factories import TEST_OTP_CODE, get_user_by_email, register_payload
 from tests.receivables.conftest import add_organization, build_debtor
 
 AUTH_BASE = "/api/v1/auth"
@@ -100,7 +100,7 @@ class TestVerifyOtp:
         )
 
         resp = await authed.post(
-            f"{BASE}/verify-otp", json={"channel": "EMAIL", "code": code_row.code}
+            f"{BASE}/verify-otp", json={"channel": "EMAIL", "code": TEST_OTP_CODE}
         )
         assert resp.status_code == 204
 
@@ -135,7 +135,7 @@ class TestVerifyOtp:
             .first()
         )
         resp = await authed.post(
-            f"{BASE}/verify-otp", json={"channel": "EMAIL", "code": code_row.code}
+            f"{BASE}/verify-otp", json={"channel": "EMAIL", "code": TEST_OTP_CODE}
         )
         assert resp.status_code == 204
 

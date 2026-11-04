@@ -20,6 +20,7 @@ from identity.users.enums.user_enums import UserRole, UserScope
 from messaging.providers.email_provider import NRS360EmailProvider
 from tests.factories import (
     STRONG_PASSWORD,
+    TEST_OTP_CODE,
     get_user_by_email,
     register_payload,
     unique_document_number,
@@ -526,7 +527,7 @@ class TestForgotPassword:
             json={
                 "document_type": payload["document_type"],
                 "document_number": payload["document_number"],
-                "code": code_row.code,
+                "code": TEST_OTP_CODE,
                 "channel": "EMAIL",
             },
         )
@@ -601,7 +602,7 @@ class TestForgotPassword:
             json={
                 "document_type": payload["document_type"],
                 "document_number": payload["document_number"],
-                "code": code_row.code,
+                "code": TEST_OTP_CODE,
                 "channel": "EMAIL",
             },
         )
@@ -636,7 +637,7 @@ class TestForgotPassword:
             json={
                 "document_type": payload["document_type"],
                 "document_number": payload["document_number"],
-                "code": code_row.code,
+                "code": TEST_OTP_CODE,
                 "channel": "EMAIL",
                 "new_password": "OtraFuerte1!",
             },
@@ -678,3 +679,32 @@ class TestForgotPassword:
             },
         )
         assert resp.status_code == 400
+
+
+class TestVerificationCodeStorage:
+    async def test_code_is_not_stored_in_plain_text(self, client, db_session):
+        payload = register_payload()
+        await client.post(f"{BASE}/register/user", json=payload)
+        await client.post(
+            f"{BASE}/forgot-password/send-code",
+            json={
+                "document_type": payload["document_type"],
+                "document_number": payload["document_number"],
+                "channel": "EMAIL",
+            },
+        )
+        user = await get_user_by_email(db_session, payload["email"])
+        row = (
+            (
+                await db_session.execute(
+                    select(VerificationCodeModel).where(
+                        VerificationCodeModel.user_id == user.id
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+        assert row is not None
+        assert row.code != TEST_OTP_CODE
+        assert len(row.code) == 64

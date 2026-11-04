@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func, select
 
 from core.base.soft_delete_repository_base import SoftDeleteRepositoryBase
+from core.security.services.encrypt_service import encrypt_service
 from identity.auth.enums.notification_enums import VerificationChannel
 from identity.auth.exceptions import (
     CodeAlreadyUsedException,
@@ -13,6 +14,12 @@ from identity.auth.exceptions import (
     CodeNotFoundException,
 )
 from identity.auth.models.verification_code_model import VerificationCodeModel
+
+
+def hash_verification_code(user_id: uuid.UUID, code: str) -> str:
+    """HMAC del código ligado al usuario: la tabla nunca guarda el OTP en claro (un
+    volcado de la base no debe servir para resetear contraseñas o pasar el MFA)."""
+    return encrypt_service.hash_document(f"otp:{user_id}:{code}")
 
 
 class VerificationCodeRepository(SoftDeleteRepositoryBase[VerificationCodeModel]):
@@ -24,7 +31,7 @@ class VerificationCodeRepository(SoftDeleteRepositoryBase[VerificationCodeModel]
         result = await self.session.execute(
             select(VerificationCodeModel).where(
                 VerificationCodeModel.user_id == user_id,
-                VerificationCodeModel.code == code,
+                VerificationCodeModel.code == hash_verification_code(user_id, code),
                 VerificationCodeModel.channel == channel,
                 VerificationCodeModel.consumed_at.is_(None),
                 VerificationCodeModel.expires_at > func.now(),
@@ -38,7 +45,7 @@ class VerificationCodeRepository(SoftDeleteRepositoryBase[VerificationCodeModel]
         result = await self.session.execute(
             select(VerificationCodeModel).where(
                 VerificationCodeModel.user_id == user_id,
-                VerificationCodeModel.code == code,
+                VerificationCodeModel.code == hash_verification_code(user_id, code),
                 VerificationCodeModel.channel == channel,
             )
         )
