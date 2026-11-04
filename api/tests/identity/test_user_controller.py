@@ -2,7 +2,9 @@ import uuid
 
 import pytest
 
+from core.database.redis import redis_client
 from identity.users.enums.user_enums import UserRole, UserScope
+from identity.users.schemas.user_session_schema import session_key
 from tests.factories import get_user_by_email, mark_mfa_verified, register_payload
 
 AUTH_BASE = "/api/v1/auth"
@@ -12,7 +14,7 @@ BASE = "/api/v1/users"
 @pytest.fixture
 async def real_user(client, db_session):
     """Registra un usuario real y deja el `client` autenticado vía cookie real
-    (no `auth_as`): /me y /preferences/tours usan `TokenPayload`, JWT real."""
+    (no `auth_as`): /me y /preferences/tours validan la sesión real en Redis."""
     payload = register_payload()
     resp = await client.post(f"{AUTH_BASE}/register/user", json=payload)
     assert resp.status_code == 201
@@ -26,6 +28,19 @@ class TestMe:
         resp = await client.get(f"{BASE}/me")
         assert resp.status_code == 200
         assert resp.json()["userId"] == str(real_user.id)
+
+    async def test_me_after_logout_does_not_revive_session(self, client, real_user):
+        access_token = client.cookies.get("access_token")
+        assert access_token
+        logout = await client.post(f"{AUTH_BASE}/logout")
+        assert logout.status_code == 200
+        client.cookies.clear()
+        headers = {"Authorization": f"Bearer {access_token}"}
+        resp = await client.get(f"{BASE}/me", headers=headers)
+        assert resp.status_code == 401
+        assert await redis_client.get(session_key(real_user.id)) is None
+        tours = await client.get(f"{BASE}/me/preferences/tours", headers=headers)
+        assert tours.status_code == 401
 
     async def test_me_without_auth_returns_401(self, client):
         resp = await client.get(f"{BASE}/me")

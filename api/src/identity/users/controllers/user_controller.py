@@ -4,16 +4,14 @@ import uuid
 from typing import Annotated
 
 from fastapi import File, HTTPException, Query, Response, UploadFile, status
-from pydantic import ValidationError as PydanticValidationError
 
 from core.config.api_router import APIRouter
 from core.security.constants.permissions import ORG_USERS
-from core.security.dependencies import CurrentSession
+from core.security.dependencies import CurrentSession, PendingMfaSession
 from core.security.policies.security_policies import (
     require_admin_or_org,
     require_global_admin,
 )
-from identity.auth.dependencies import TokenPayload
 from identity.users.dependencies import UserServiceDep
 from identity.users.enums.user_enums import UserRole, UserScope
 from identity.users.schemas.user_preferences_schema import UserToursSchema
@@ -24,7 +22,7 @@ from identity.users.schemas.user_schemas import (
     ProfilePhotoSchema,
     UpdateUserSchema,
 )
-from identity.users.schemas.user_session_schema import UserSession, session_key
+from identity.users.schemas.user_session_schema import UserSession
 
 router = APIRouter(prefix="/users", tags=["Usuarios"])
 
@@ -32,24 +30,14 @@ router = APIRouter(prefix="/users", tags=["Usuarios"])
 @router.get(
     "/me", response_model=UserSession, summary="Obtener sesión del usuario autenticado"
 )
-async def me(payload: TokenPayload, service: UserServiceDep) -> UserSession:
-    try:
-        user_id = uuid.UUID(str(payload["sub"]))
-    except (KeyError, ValueError, TypeError) as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido."
-        ) from e
+async def me(session: PendingMfaSession) -> UserSession:
+    """Devuelve la sesión vigente en Redis, sin reconstruirla.
 
-    try:
-        cached = await service.redis.get_json(session_key(user_id), UserSession)
-    except PydanticValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Tu sesión no es válida. Inicia sesión nuevamente.",
-        ) from e
-    if cached is not None:
-        return cached
-    return await service.get_user_session(user_id)
+    Admite MFA pendiente (lo consulta `MfaGuard` para decidir si mostrar el
+    desafío). Si la sesión no existe responde 401: reconstruirla aquí revivía
+    sesiones cerradas por logout o revocación con un token aún vigente; el
+    cliente recupera una sesión invalidada vía `/auth/refresh`."""
+    return session
 
 
 @router.get(
@@ -58,10 +46,9 @@ async def me(payload: TokenPayload, service: UserServiceDep) -> UserSession:
     summary="Obtener tours descartados por el usuario",
 )
 async def get_tour_preferences(
-    payload: TokenPayload, service: UserServiceDep
+    session: PendingMfaSession, service: UserServiceDep
 ) -> UserToursSchema:
-    user_id = uuid.UUID(str(payload["sub"]))
-    dismissed = await service.get_dismissed_tours(user_id)
+    dismissed = await service.get_dismissed_tours(session.user_id)
     return UserToursSchema(dismissed_tours=dismissed)
 
 
@@ -71,10 +58,9 @@ async def get_tour_preferences(
     summary="Descartar un tour de la interfaz",
 )
 async def dismiss_tour(
-    tour_key: str, payload: TokenPayload, service: UserServiceDep
+    tour_key: str, session: PendingMfaSession, service: UserServiceDep
 ) -> UserToursSchema:
-    user_id = uuid.UUID(str(payload["sub"]))
-    dismissed = await service.dismiss_tour(user_id, tour_key)
+    dismissed = await service.dismiss_tour(session.user_id, tour_key)
     return UserToursSchema(dismissed_tours=dismissed)
 
 
@@ -84,10 +70,9 @@ async def dismiss_tour(
     summary="Volver a mostrar un tour de la interfaz",
 )
 async def restore_tour(
-    tour_key: str, payload: TokenPayload, service: UserServiceDep
+    tour_key: str, session: PendingMfaSession, service: UserServiceDep
 ) -> UserToursSchema:
-    user_id = uuid.UUID(str(payload["sub"]))
-    dismissed = await service.restore_tour(user_id, tour_key)
+    dismissed = await service.restore_tour(session.user_id, tour_key)
     return UserToursSchema(dismissed_tours=dismissed)
 
 
@@ -97,10 +82,9 @@ async def restore_tour(
     summary="Volver a mostrar todos los tours de la interfaz",
 )
 async def restore_all_tours(
-    payload: TokenPayload, service: UserServiceDep
+    session: PendingMfaSession, service: UserServiceDep
 ) -> UserToursSchema:
-    user_id = uuid.UUID(str(payload["sub"]))
-    dismissed = await service.restore_all_tours(user_id)
+    dismissed = await service.restore_all_tours(session.user_id)
     return UserToursSchema(dismissed_tours=dismissed)
 
 
@@ -111,12 +95,11 @@ async def restore_all_tours(
     description="Sube la imagen (JPG, PNG o WebP) y reemplaza la anterior.",
 )
 async def update_profile_photo(
-    payload: TokenPayload,
+    session: CurrentSession,
     service: UserServiceDep,
     file: Annotated[UploadFile, File(description="Imagen a subir")],
 ) -> ProfilePhotoSchema:
-    user_id = uuid.UUID(str(payload["sub"]))
-    return await service.update_profile_photo(user_id, file)
+    return await service.update_profile_photo(session.user_id, file)
 
 
 @router.get(
