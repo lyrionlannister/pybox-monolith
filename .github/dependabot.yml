@@ -1,0 +1,28 @@
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+  - package-ecosystem: "npm"
+    directory: "/client"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "docker"
+    directories:
+      - "/api"
+      - "/client"
+      - "/landing"
+      - "/nginx"
+      - "/n8n"
+      - "/database"
+      - "/redis"
+      - "/object-storage"
+    schedule:
+      interval: "monthly"

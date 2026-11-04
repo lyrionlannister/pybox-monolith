@@ -1,0 +1,10 @@
+# Falsos positivos revisados (2026-11-04): llave sandbox pública de PayU en tests,
+# valores dummy no secretos del workflow de CI y variables vacías de .env.example.
+05aeebdad39ddc9c718c37cf45b896fc9be6011f:api/tests/receivables/test_payu_signature.py:generic-api-key:16
+06d06e4eada7a354246deeda01b02b0ab173e902:api/tests/receivables/test_payu_signature.py:generic-api-key:16
+fd939389ca5eec25106beb9493da98653ed4820f:.github/workflows/ci.yml:generic-api-key:37
+fd939389ca5eec25106beb9493da98653ed4820f:.github/workflows/ci.yml:generic-api-key:38
+fd939389ca5eec25106beb9493da98653ed4820f:.github/workflows/ci.yml:generic-api-key:39
+fd939389ca5eec25106beb9493da98653ed4820f:.github/workflows/ci.yml:generic-api-key:40
+ab7edc3b8ad4890d35981fe7b0d439eee7a53f74:.github/workflows/ci.yml:generic-api-key:33
+3616906e857d87f5f59dc9710bdabe3142f1b2d4:.env.example:generic-api-key:105
