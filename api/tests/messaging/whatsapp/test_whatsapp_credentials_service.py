@@ -20,6 +20,7 @@ from messaging.whatsapp.schemas.whatsapp_credentials_schemas import (
 from messaging.whatsapp.services.whatsapp_credentials_service import (
     WhatsAppCredentialsService,
 )
+from identity.users.schemas.user_session_schema import OrgSessionEntry
 from tests.conftest import make_user_session
 
 ADMIN_SESSION = make_user_session(role=UserRole.ADMIN, scope=UserScope.GLOBAL)
@@ -27,6 +28,7 @@ ADMIN_SESSION = make_user_session(role=UserRole.ADMIN, scope=UserScope.GLOBAL)
 
 def build_service() -> tuple[WhatsAppCredentialsService, MagicMock]:
     repo = MagicMock()
+    repo.get_by_phone_number_id = AsyncMock(return_value=None)
     return WhatsAppCredentialsService(repo), repo
 
 
@@ -112,3 +114,34 @@ class TestUpsert:
         with pytest.raises(HTTPException) as exc_info:
             await service.upsert(uuid.uuid4(), data, agent_session)
         assert exc_info.value.status_code == 403
+
+    async def test_org_admin_cannot_assign_numbers(self):
+        organization_id = uuid.uuid4()
+        service, _repo = build_service()
+        org_admin = make_user_session(
+            role=None,
+            scope=UserScope.ORGANIZATION,
+            orgs={
+                str(organization_id): OrgSessionEntry(
+                    role=UserRole.ADMIN, org_name="Org"
+                )
+            },
+        )
+        data = WhatsAppOrgCredentialsRequest(phone_number_id="123")
+
+        with pytest.raises(HTTPException) as exc_info:
+            await service.upsert(organization_id, data, org_admin)
+        assert exc_info.value.status_code == 403
+
+    async def test_number_of_another_org_returns_409(self):
+        service, repo = build_service()
+        repo.get_by_phone_number_id = AsyncMock(
+            return_value=WhatsAppOrgCredentialsModel(
+                organization_id=uuid.uuid4(), phone_number_id="123", active=True
+            )
+        )
+        data = WhatsAppOrgCredentialsRequest(phone_number_id="123")
+
+        with pytest.raises(HTTPException) as exc_info:
+            await service.upsert(uuid.uuid4(), data, ADMIN_SESSION)
+        assert exc_info.value.status_code == 409

@@ -1,6 +1,6 @@
 """Credenciales de WhatsApp Business Cloud API de una organización."""
 
-from sqlalchemy import Boolean, String, UniqueConstraint
+from sqlalchemy import Boolean, Index, String, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.base.created_at_mixin import CreatedAtMixin
@@ -17,6 +17,14 @@ class WhatsAppOrgCredentialsModel(
     __table_args__ = (
         UniqueConstraint(
             "id_organizacion", name="uq_whatsapp_credenciales_organizacion"
+        ),
+        # El token de Meta es global: un mismo número no puede quedar asignado a dos
+        # organizaciones (enviaría en nombre de otra y el webhook enrutaría mal).
+        Index(
+            "uq_whatsapp_credenciales_id_numero_telefono",
+            "id_numero_telefono",
+            unique=True,
+            postgresql_where=text("eliminado_en IS NULL"),
         ),
     )
 
