@@ -177,7 +177,7 @@ async def preview_template(
 @router.post(
     "/{template_id}/send",
     response_model=TemplateSendResponse,
-    summary="Enviar una plantilla de EMAIL a un destinatario puntual",
+    summary="Enviar una plantilla de EMAIL de prueba al propio correo",
 )
 async def send_template(
     template_id: uuid.UUID,

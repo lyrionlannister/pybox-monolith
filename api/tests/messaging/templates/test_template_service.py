@@ -34,9 +34,11 @@ def build_service():
     return service, template_repo, portfolio_repo
 
 
-def make_user_session(*, is_global=True):
+def make_user_session(*, is_global=True, email="usuario@example.com"):
     session = MagicMock()
     session.is_global = is_global
+    session.email = email
+    session.user_id = uuid.uuid4()
     return session
 
 
@@ -163,6 +165,27 @@ class TestSend:
         template = MagicMock(**defaults)
         return template
 
+    async def test_recipient_other_than_own_email_raises_422(self):
+        service, template_repo, portfolio_repo = build_service()
+        portfolio_repo.get_by_id = AsyncMock(return_value=make_portfolio())
+        template_repo.get_by_id_and_portfolio = AsyncMock(
+            return_value=self._make_email_template()
+        )
+
+        with patch(
+            "messaging.templates.services.template_service._DISPATCHER"
+        ) as mock_dispatcher:
+            mock_dispatcher.send = AsyncMock(return_value=(True, None, None))
+            with pytest.raises(HTTPException) as exc_info:
+                await service.send(
+                    uuid.uuid4(),
+                    uuid.uuid4(),
+                    TemplateSendRequest(to="victima@otro.com", sub={}),
+                    make_user_session(email="a@b.com"),
+                )
+        assert exc_info.value.status_code == 422
+        mock_dispatcher.send.assert_not_called()
+
     async def test_non_email_channel_raises_422(self):
         service, template_repo, portfolio_repo = build_service()
         portfolio_repo.get_by_id = AsyncMock(return_value=make_portfolio())
@@ -174,7 +197,7 @@ class TestSend:
                 uuid.uuid4(),
                 uuid.uuid4(),
                 TemplateSendRequest(to="a@b.com", sub={}),
-                make_user_session(),
+                make_user_session(email="a@b.com"),
             )
         assert exc_info.value.status_code == 422
 
@@ -189,7 +212,7 @@ class TestSend:
                 uuid.uuid4(),
                 uuid.uuid4(),
                 TemplateSendRequest(to="a@b.com", sub={}),
-                make_user_session(),
+                make_user_session(email="a@b.com"),
             )
         assert exc_info.value.status_code == 422
 
@@ -210,7 +233,7 @@ class TestSend:
                 uuid.uuid4(),
                 uuid.uuid4(),
                 TemplateSendRequest(to="a@b.com", subject=None, sub={"nombre": "Ana"}),
-                make_user_session(),
+                make_user_session(email="a@b.com"),
             )
 
         mock_dispatcher.send.assert_awaited_once()
@@ -242,7 +265,7 @@ class TestSend:
                 uuid.uuid4(),
                 uuid.uuid4(),
                 TemplateSendRequest(to="a@b.com", subject="Asunto custom", sub={}),
-                make_user_session(),
+                make_user_session(email="a@b.com"),
             )
 
         assert mock_dispatcher.send.await_args.kwargs["subject"] == "Asunto custom"
@@ -262,6 +285,6 @@ class TestSend:
                     uuid.uuid4(),
                     uuid.uuid4(),
                     TemplateSendRequest(to="a@b.com", sub={}),
-                    make_user_session(),
+                    make_user_session(email="a@b.com"),
                 )
         assert exc_info.value.status_code == 502
