@@ -1,8 +1,10 @@
 """Registro, login, OAuth y recuperación de contraseña de usuarios."""
 
+import hashlib
 import uuid
 from typing import cast
 
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app_platform.countries.enums.country_enums import DocumentScope
@@ -47,6 +49,27 @@ from ..utils.auth_utils import (
     resolve_auth_provider,
 )
 from .oauth_provider_service import OAuthProviderService, ProviderProfile
+
+LOGIN_MAX_FAILED_ATTEMPTS = 10
+LOGIN_LOCKOUT_SECONDS = 15 * 60
+_INVALID_CREDENTIALS = "Credenciales inválidas."
+_dummy_hash_cache: list[str] = []
+
+
+def _login_failures_key(email: str) -> str:
+    return f"login-fail:{email}"
+
+
+def _fake_reset_lookup(doc_hash: str) -> dict:
+    """Pistas enmascaradas falsas, pero estables por documento, para un documento sin
+    cuenta: devolver `None` delataba qué documentos están registrados."""
+    digest = hashlib.sha256(f"reset-lookup:{doc_hash}".encode()).hexdigest()
+    local = "".join(chr(ord("a") + int(c, 16) % 26) for c in digest[:8])
+    digits = "".join(str(int(c, 16) % 10) for c in digest[8:16])
+    return {
+        "masked_email": mask_email(f"{local}@gmail.com"),
+        "masked_phone": mask_phone(f"+573{digits}{digits[:1]}"),
+    }
 
 
 class AuthService:
@@ -131,17 +154,40 @@ class AuthService:
         logger.info("[auth] register | user_id=%s", user.id)
         return user
 
+    def _dummy_password_hash(self) -> str:
+        """Hash de referencia para gastar el mismo tiempo de Argon2 cuando la cuenta
+        no existe o no tiene contraseña (si no, la latencia delata el email). Se
+        calcula una vez por proceso."""
+        if not _dummy_hash_cache:
+            _dummy_hash_cache.append(
+                self.password_hasher.hash_password("dummy-password-for-timing")
+            )
+        return _dummy_hash_cache[0]
+
     async def authenticate_user(self, user_data: UserLogin) -> AuthResponse:
+        """Login con correo y contraseña.
+
+        Misma respuesta (y mismo costo de Argon2) exista o no la cuenta, y bloqueo
+        temporal por cuenta tras `LOGIN_MAX_FAILED_ATTEMPTS` fallos: el rate limit
+        por IP solo no frena un ataque distribuido contra una cuenta."""
         email = normalize_email(user_data.email)
         password = require_value(user_data.password, "La contraseña es obligatoria.")
+        failures_key = _login_failures_key(email)
+
+        failures = await redis_client.get(failures_key)
+        if failures is not None and int(failures) >= LOGIN_MAX_FAILED_ATTEMPTS:
+            raise HTTPException(
+                status.HTTP_429_TOO_MANY_REQUESTS,
+                "Demasiados intentos fallidos. Espera unos minutos antes de volver a "
+                "intentarlo.",
+            )
 
         user = await self.user_repository.get_by_email(email)
-        if not user:
-            raise ValueError("Credenciales inválidas.")
-
-        stored_hash = cast(str | None, user.hashed_password)
+        stored_hash = cast(str | None, user.hashed_password) if user else None
         if not stored_hash:
-            raise ValueError("Este usuario debe autenticarse con proveedor externo.")
+            self.password_hasher.verify_password(self._dummy_password_hash(), password)
+            await redis_client.increment(failures_key, LOGIN_LOCKOUT_SECONDS)
+            raise ValueError(_INVALID_CREDENTIALS)
 
         is_valid, new_hash = self.password_hasher.verify_and_maybe_rehash(
             stored_hash, password
@@ -150,8 +196,10 @@ class AuthService:
             logger.warning(
                 "[auth] login_failed | user_id=%s reason=invalid_password", user.id
             )
-            raise ValueError("Credenciales inválidas.")
+            await redis_client.increment(failures_key, LOGIN_LOCKOUT_SECONDS)
+            raise ValueError(_INVALID_CREDENTIALS)
 
+        await redis_client.delete(failures_key)
         if new_hash:
             setattr(user, "hashed_password", new_hash)
             user = await self.user_repository.update(user)
@@ -336,7 +384,7 @@ class AuthService:
             logger.warning(
                 "[auth] login_rejected | user_id=%s reason=inactive", user.id
             )
-            raise ValueError("Credenciales inválidas.")
+            raise ValueError(_INVALID_CREDENTIALS)
         setattr(user, "is_active_sessions", True)
         await self.user_repository.update(user)
         if new_login:
@@ -381,14 +429,14 @@ class AuthService:
     async def lookup_user_for_reset(
         self, document_type: str, document_number: str
     ) -> dict:
-        # Respuesta uniforme exista o no la cuenta (ambos campos en None si no existe):
-        # evita que el status code / la forma de la respuesta sirvan de oráculo para
-        # enumerar documentos registrados. Combinado con el rate limit del endpoint.
+        # Respuesta indistinguible exista o no la cuenta (pistas falsas estables si no
+        # existe): evita que la respuesta sirva de oráculo para enumerar documentos
+        # registrados. Combinado con el rate limit del endpoint.
         dt = document_type
         doc_hash = encrypt_service.hash_document(document_number)
         user = await self.user_repository.get_by_document(dt, doc_hash)
         if user is None:
-            return {"masked_email": None, "masked_phone": None}
+            return _fake_reset_lookup(doc_hash)
         return {
             "masked_email": mask_email(cast(str, user.email)) if user.email else None,
             "masked_phone": (
@@ -409,7 +457,7 @@ class AuthService:
         doc_hash = encrypt_service.hash_document(document_number)
         user = await self.user_repository.get_by_document(dt, doc_hash)
         if user is None:
-            raise ValueError("Credenciales inválidas.")
+            raise ValueError("Código incorrecto.")
         svc = get_verification_service(channel, self._session)
         try:
             await svc.peek_code(user.id, code)
@@ -453,12 +501,12 @@ class AuthService:
         doc_hash = encrypt_service.hash_document(document_number)
         user = await self.user_repository.get_by_document(dt, doc_hash)
         if user is None:
-            raise ValueError("Credenciales inválidas.")
+            raise ValueError("Código incorrecto.")
         svc = get_verification_service(channel, self._session)
         try:
             await svc.verify_code(user.id, code)
         except CodeNotFoundException as e:
-            raise ValueError("Código no encontrado.") from e
+            raise ValueError("Código incorrecto.") from e
         except CodeExpiredException as e:
             raise ValueError("El código ha expirado.") from e
         except CodeAlreadyUsedException as e:

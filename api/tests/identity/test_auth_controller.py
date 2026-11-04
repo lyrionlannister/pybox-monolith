@@ -6,9 +6,11 @@ import httpx
 import pytest
 from sqlalchemy import select
 
+from core.database.redis import redis_client
 from identity.auth.enums.auth_enums import AuthProvider
 from identity.auth.enums.notification_enums import VerificationChannel
 from identity.auth.models.verification_code_model import VerificationCodeModel
+from identity.auth.services.auth_service import LOGIN_MAX_FAILED_ATTEMPTS
 from identity.auth.services.oauth_provider_service import (
     OAuthProviderService,
     ProviderProfile,
@@ -124,6 +126,43 @@ class TestLogin:
             f"{BASE}/login", json={"email": unique_email(), "password": STRONG_PASSWORD}
         )
         assert resp.status_code == 400
+
+    async def test_account_locked_after_repeated_failures(self, client):
+        payload = register_payload()
+        await client.post(f"{BASE}/register", json=payload)
+        client.cookies.clear()
+        wrong = {"email": payload["email"], "password": "OtraClave1!"}
+        for _ in range(LOGIN_MAX_FAILED_ATTEMPTS):
+            resp = await client.post(f"{BASE}/login", json=wrong)
+            assert resp.status_code == 400
+        locked = await client.post(
+            f"{BASE}/login",
+            json={"email": payload["email"], "password": payload["password"]},
+        )
+        assert locked.status_code == 429
+
+    async def test_successful_login_resets_failure_counter(self, client):
+        payload = register_payload()
+        await client.post(f"{BASE}/register", json=payload)
+        client.cookies.clear()
+        wrong = {"email": payload["email"], "password": "OtraClave1!"}
+        good = {"email": payload["email"], "password": payload["password"]}
+        await client.post(f"{BASE}/login", json=wrong)
+        assert (await client.post(f"{BASE}/login", json=good)).status_code == 200
+        assert await redis_client.get(f"login-fail:{payload['email'].lower()}") is None
+
+    async def test_unknown_email_and_wrong_password_same_message(self, client):
+        payload = register_payload()
+        await client.post(f"{BASE}/register", json=payload)
+        client.cookies.clear()
+        wrong_pw = await client.post(
+            f"{BASE}/login", json={"email": payload["email"], "password": "OtraClave1!"}
+        )
+        unknown = await client.post(
+            f"{BASE}/login", json={"email": unique_email(), "password": "OtraClave1!"}
+        )
+        assert wrong_pw.status_code == unknown.status_code == 400
+        assert wrong_pw.json() == unknown.json()
 
     async def test_login_inactive_user_returns_400(self, client, db_session):
         payload = register_payload()
@@ -419,14 +458,17 @@ class TestForgotPassword:
         body = resp.json()
         assert body["maskedEmail"] is not None
 
-    async def test_lookup_unknown_document_returns_uniform_empty_response(self, client):
-        resp = await client.post(
-            f"{BASE}/forgot-password/lookup",
-            json={"document_type": "CC", "document_number": unique_document_number()},
-        )
-        assert resp.status_code == 200
-        body = resp.json()
-        assert body == {"maskedEmail": None, "maskedPhone": None}
+    async def test_lookup_unknown_document_is_indistinguishable(self, client):
+        body_payload = {
+            "document_type": "CC",
+            "document_number": unique_document_number(),
+        }
+        first = await client.post(f"{BASE}/forgot-password/lookup", json=body_payload)
+        second = await client.post(f"{BASE}/forgot-password/lookup", json=body_payload)
+        assert first.status_code == 200
+        body = first.json()
+        assert body["maskedEmail"] and body["maskedPhone"]
+        assert second.json() == body
 
     async def test_send_code_valid(self, client):
         payload = register_payload()
