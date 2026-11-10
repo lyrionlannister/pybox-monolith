@@ -1,11 +1,13 @@
 """Roles de empresa: nombre + conjunto de permisos del catálogo, definidos y
 asignados por cada organización sobre el motor de permisos existente."""
 
+from __future__ import annotations
+
 import uuid
+from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, status
 
-from core.database.redis import redis_client
 from core.security.constants.permissions import ORG_USERS
 from core.security.policies.security_policies import (
     require_admin_or_org,
@@ -24,7 +26,13 @@ from identity.users.schemas.company_role_schemas import (
     CompanyRoleResponse,
     CompanyRoleUpdate,
 )
-from identity.users.schemas.user_session_schema import UserSession, session_key
+from identity.users.schemas.user_session_schema import UserSession
+
+# OrganizationService construye este servicio y UserService construye
+# OrganizationService: un import normal aquí sería un ciclo. Solo se necesita para
+# el chequeo de tipos (ver `from __future__ import annotations` arriba).
+if TYPE_CHECKING:
+    from identity.users.services.user_service import UserService
 
 # Plantilla sugerida al crear la empresa (párr. 63 del plan): un punto de partida
 # editable y eliminable, no dos roles fijos para todas las empresas.
@@ -37,10 +45,12 @@ class CompanyRoleService:
         company_role_repo: CompanyRoleRepository,
         permission_assignment_repo: PermissionAssignmentRepository,
         membership_repo: OrganizationMembershipRepository,
+        user_service: UserService | None = None,
     ):
         self.company_role_repo = company_role_repo
         self.permission_assignment_repo = permission_assignment_repo
         self.membership_repo = membership_repo
+        self.user_service = user_service
 
     async def _resolve_permission_ids(
         self, permission_names: list[str]
@@ -132,10 +142,14 @@ class CompanyRoleService:
 
     async def _invalidate_sessions(self, role_id: uuid.UUID) -> None:
         """La sesión cacheada lleva los permisos efectivos: sin esto, un cambio en
-        los permisos del rol o en sus asignaciones no se ve hasta que expire."""
+        los permisos del rol o en sus asignaciones no se ve hasta que expire. Se
+        reconstruye en vez de borrarse: si el actor se modifica a sí mismo (p. ej.
+        se autoasigna o retira un rol), borrarla lo deslogueaba a mitad de flujo."""
+        if self.user_service is None:
+            return
         user_ids = await self.company_role_repo.get_assigned_user_ids(role_id)
         for user_id in user_ids:
-            await redis_client.delete(session_key(user_id))
+            await self.user_service.get_user_session(user_id)
 
     async def delete_role(
         self, session: UserSession, org_id: uuid.UUID, role_id: uuid.UUID
@@ -165,7 +179,8 @@ class CompanyRoleService:
         await self._require_role(org_id, role_id)
         await self._require_org_member(org_id, user_id)
         await self.company_role_repo.assign_user(user_id, role_id, org_id)
-        await redis_client.delete(session_key(user_id))
+        if self.user_service is not None:
+            await self.user_service.get_user_session(user_id)
 
     async def unassign_user(
         self,
@@ -179,7 +194,8 @@ class CompanyRoleService:
         removed = await self.company_role_repo.unassign_user(user_id, role_id)
         if not removed:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Asignación no encontrada")
-        await redis_client.delete(session_key(user_id))
+        if self.user_service is not None:
+            await self.user_service.get_user_session(user_id)
 
     async def list_assigned_user_ids(
         self, session: UserSession, org_id: uuid.UUID, role_id: uuid.UUID

@@ -59,6 +59,7 @@ def get_company_role_service(
         company_role_repo=CompanyRoleRepository(session),
         permission_assignment_repo=PermissionAssignmentRepository(session),
         membership_repo=OrganizationMembershipRepository(session),
+        user_service=get_user_service(session),
     )
 
 
