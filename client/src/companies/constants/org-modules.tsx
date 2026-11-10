@@ -5,6 +5,7 @@ import {
   KeyRound,
   Receipt,
   Settings,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 import type { OrgModule } from "@/types/companies/company-types";
@@ -66,15 +67,15 @@ export const ORG_MODULES: OrgModule[] = [
     path: "/my-companies/reports",
     requiredPermission: "org.reports",
   },
-  // {
-  //   key: "roles",
-  //   title: "Roles",
-  //   description: "Administra los roles y permisos de los usuarios.",
-  //   icon: ShieldCheck,
-  //   gradient: "from-cyan-500 to-sky-600",
-  //   path: null,
-  //   adminOnly: true,
-  // },
+  {
+    key: "company-roles",
+    title: "Roles de Empresa",
+    description: "Define roles con permisos y asígnalos a los miembros de la empresa.",
+    icon: ShieldCheck,
+    gradient: "from-cyan-500 to-sky-600",
+    path: "/my-companies/company-roles",
+    requiredPermission: "org.users",
+  },
   {
     key: "settings",
     title: "Configuración",

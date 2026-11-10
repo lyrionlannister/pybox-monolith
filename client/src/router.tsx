@@ -45,6 +45,7 @@ const UsersPage = lazy(() => import("./users/pages/users-page").then((m) => ({ d
 const UserDetailPage = lazy(() => import("./users/pages/user-detail-page").then((m) => ({ default: m.UserDetailPage })));
 const UserEditPage = lazy(() => import("./users/pages/user-edit-page").then((m) => ({ default: m.UserEditPage })));
 const UserSettingsPage = lazy(() => import("./users/pages/user-settings-page").then((m) => ({ default: m.UserSettingsPage })));
+const CompanyRolesPage = lazy(() => import("./users/pages/company-roles-page").then((m) => ({ default: m.CompanyRolesPage })));
 const UserPortfoliosPage = lazy(() => import("./users/pages/user-portfolios-page").then((m) => ({ default: m.UserPortfoliosPage })));
 const CreateUserPage = lazy(() => import("./users/pages/create-user-page").then((m) => ({ default: m.CreateUserPage })));
 const ChatPage = lazy(() => import("./chat/pages/chat-page").then((m) => ({ default: m.ChatPage })));
@@ -291,6 +292,10 @@ export const authRouter = [
   {
     path: "/my-companies/users",
     element: <UsersPage />,
+  },
+  {
+    path: "/my-companies/company-roles",
+    element: <CompanyRolesPage />,
   },
   {
     path: "/my-users/add",
