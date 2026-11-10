@@ -69,6 +69,20 @@ async def delete_role(
     await service.delete_role(session, org_id, role_id)
 
 
+@router.get(
+    "/{role_id}/users",
+    response_model=list[uuid.UUID],
+    summary="Listar usuarios asignados a un rol de empresa",
+)
+async def list_role_users(
+    org_id: uuid.UUID,
+    role_id: uuid.UUID,
+    session: CurrentSession,
+    service: CompanyRoleServiceDep,
+):
+    return await service.list_assigned_user_ids(session, org_id, role_id)
+
+
 @router.post(
     "/{role_id}/users/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,

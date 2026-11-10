@@ -181,6 +181,13 @@ class CompanyRoleService:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Asignación no encontrada")
         await redis_client.delete(session_key(user_id))
 
+    async def list_assigned_user_ids(
+        self, session: UserSession, org_id: uuid.UUID, role_id: uuid.UUID
+    ) -> list[uuid.UUID]:
+        require_org_access(session, str(org_id))
+        await self._require_role(org_id, role_id)
+        return await self.company_role_repo.get_assigned_user_ids(role_id)
+
     async def seed_example_roles(self, org_id: uuid.UUID) -> None:
         """Dos roles de ejemplo precargados al crear la empresa (párr. 63):
         editables y eliminables, no fijos para toda la plataforma."""

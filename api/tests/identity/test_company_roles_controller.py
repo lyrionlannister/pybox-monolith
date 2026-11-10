@@ -195,6 +195,53 @@ class TestCompanyRolesTenantIsolation:
         assert resp.status_code == 403
 
 
+class TestCompanyRolesAssignedUsers:
+    async def test_cannot_list_assigned_users_of_a_role_from_another_organization(
+        self,
+        auth_as,
+        make_user_session_factory,
+        org,
+        other_org,
+        org_admin_id,
+        other_org_admin_id,
+    ):
+        role_id = await _create_role(
+            auth_as,
+            _org_session(
+                make_user_session_factory, org_admin_id, org.id, UserRole.ADMIN
+            ),
+            org.id,
+        )
+
+        session = _org_session(
+            make_user_session_factory, other_org_admin_id, other_org.id, UserRole.ADMIN
+        )
+        resp = await auth_as(session).get(
+            f"{BASE}/{other_org.id}/company-roles/{role_id}/users"
+        )
+
+        assert resp.status_code == 404
+
+    async def test_assigning_a_user_appears_in_the_assigned_users_list(
+        self, auth_as, make_user_session_factory, org, org_admin_id, member_id
+    ):
+        session = _org_session(
+            make_user_session_factory, org_admin_id, org.id, UserRole.ADMIN
+        )
+        role_id = await _create_role(auth_as, session, org.id)
+
+        assign_resp = await auth_as(session).post(
+            f"{BASE}/{org.id}/company-roles/{role_id}/users/{member_id}"
+        )
+        assert assign_resp.status_code == 204
+
+        list_resp = await auth_as(session).get(
+            f"{BASE}/{org.id}/company-roles/{role_id}/users"
+        )
+        assert list_resp.status_code == 200
+        assert str(member_id) in list_resp.json()
+
+
 class TestCompanyRolesLifecycle:
     async def test_deleting_a_role_with_active_assignment_is_rejected(
         self, auth_as, make_user_session_factory, org, org_admin_id, member_id
