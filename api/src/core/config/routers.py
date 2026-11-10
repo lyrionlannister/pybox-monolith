@@ -48,6 +48,9 @@ from identity.organizations.controllers.org_members_controller import (
 from identity.organizations.controllers.organization_controller import (
     router as organizations_router,
 )
+from identity.users.controllers.company_roles_controller import (
+    router as company_roles_router,
+)
 from identity.users.controllers.global_users_controller import (
     router as global_users_router,
 )
@@ -221,6 +224,7 @@ def register_routers(app: FastAPI) -> None:
     app.include_router(users_router, prefix=API_PREFIX)
     app.include_router(global_users_router, prefix=API_PREFIX)
     app.include_router(permissions_router, prefix=API_PREFIX)
+    app.include_router(company_roles_router, prefix=API_PREFIX)
     app.include_router(schema_manager_router, prefix=API_PREFIX)
     app.include_router(segments_router, prefix=API_PREFIX)
     app.include_router(reports_router, prefix=API_PREFIX)
