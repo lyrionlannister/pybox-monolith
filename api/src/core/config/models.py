@@ -27,9 +27,12 @@ import billing.provider_credentials.models.provider_credential_model
 import identity.auth.models.verification_code_model
 import identity.organizations.models.organization_membership_model
 import identity.organizations.models.organization_model
+import identity.users.models.company_role_model
+import identity.users.models.company_role_permission_model
 import identity.users.models.permission_assignment_model
 import identity.users.models.permission_model
 import identity.users.models.role_assignment_model
+import identity.users.models.user_company_role_model
 import identity.users.models.user_model
 import identity.users.models.user_preferences_model
 import messaging.campaigns.models.campaign_model

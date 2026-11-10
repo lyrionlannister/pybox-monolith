@@ -48,6 +48,7 @@ from identity.organizations.services.organization_cascade_service import (
 from identity.users.enums.user_enums import UserRole, UserScope
 from identity.users.models.role_assignment_model import RoleAssignmentModel
 from identity.users.models.user_model import UserModel
+from identity.users.repository.company_role_repository import CompanyRoleRepository
 from identity.users.repository.permission_assignment_repository import (
     PermissionAssignmentRepository,
 )
@@ -56,6 +57,7 @@ from identity.users.repository.role_assignment_repository import (
 )
 from identity.users.repository.user_repository import UserRepository
 from identity.users.schemas.user_session_schema import UserSession, session_key
+from identity.users.services.company_role_service import CompanyRoleService
 from messaging.campaigns.repository.campaign_repository import CampaignRepository
 from messaging.contacts.repository.contact_repository import ContactRepository
 from receivables.credits.repository.credit_repository import CreditRepository
@@ -89,6 +91,12 @@ class OrganizationService:
         self._document_repo = DocumentRepository(org_repo.session)
         self._permission_assignment_repo = PermissionAssignmentRepository(
             org_repo.session
+        )
+        self._company_role_repo = CompanyRoleRepository(org_repo.session)
+        self._company_role_service = CompanyRoleService(
+            self._company_role_repo,
+            self._permission_assignment_repo,
+            membership_repo,
         )
         # Dar de baja una organización arrastra sus portafolios (y con ellos créditos y
         # campañas): esa cascada la conoce el dominio dueño de los portafolios.
@@ -307,6 +315,10 @@ class OrganizationService:
                     organization_id=org.id,
                 )
                 await self.role_assignment_repo.add(assignment)
+
+            # Roles de empresa de ejemplo (párr. 63): editables y eliminables, no
+            # dos roles fijos para toda la plataforma.
+            await self._company_role_service.seed_example_roles(org.id)
 
             await redis_client.delete(session_key(created_by_user_id))
 
@@ -620,6 +632,7 @@ class OrganizationService:
         await self._permission_assignment_repo.soft_delete_by_organization(
             org_id, deleted_at
         )
+        await self._company_role_repo.soft_delete_by_organization(org_id, deleted_at)
         await self._portfolio_service.delete_for_organization(org_id, deleted_at)
         await self._cascade_service.soft_delete_for_organization(org_id, deleted_at)
         await self._invalidate_sessions(user_ids)
@@ -639,6 +652,7 @@ class OrganizationService:
         await self._permission_assignment_repo.restore_by_organization(
             org_id, deleted_at
         )
+        await self._company_role_repo.restore_by_organization(org_id, deleted_at)
         await self._portfolio_service.restore_for_organization(org_id, deleted_at)
         await self._cascade_service.restore_for_organization(org_id, deleted_at)
         await self._invalidate_sessions(user_ids)

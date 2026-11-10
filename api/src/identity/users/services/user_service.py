@@ -34,6 +34,7 @@ from identity.users.enums.user_enums import (
 )
 from identity.users.models.role_assignment_model import RoleAssignmentModel
 from identity.users.models.user_model import UserModel
+from identity.users.repository.company_role_repository import CompanyRoleRepository
 from identity.users.repository.permission_assignment_repository import (
     PermissionAssignmentRepository,
 )
@@ -80,6 +81,7 @@ class UserService:
         self.role_assignment_repo = role_assignment_repo
         self.permission_assignment_repo = permission_assignment_repo
         self.preferences_repo = preferences_repo
+        self.company_role_repo = CompanyRoleRepository(user_repo.session)
         self._redis = redis
         self._country_service = CountryService(CountryRepository(user_repo.session))
         self._document_service = DocumentService(user_repo.session)
@@ -169,6 +171,12 @@ class UserService:
                         user_id, org_ids
                     )
                 )
+                get_company_role_perms = (
+                    self.company_role_repo.get_effective_permission_names_for_orgs
+                )
+                company_role_perms_by_org = await get_company_role_perms(
+                    user_id, org_ids
+                )
                 orgs = {}
                 for m in memberships:
                     org_id_str = str(m.organization_id)
@@ -176,6 +184,9 @@ class UserService:
                     org = org_models.get(org_id_str)
                     if assignment and org:
                         base = get_base_permissions(assignment.role)
+                        company_role_perms = company_role_perms_by_org.get(
+                            m.organization_id, frozenset()
+                        )
                         overrides = overrides_by_org.get(m.organization_id, [])
                         grants = {
                             name
@@ -190,7 +201,9 @@ class UserService:
                         orgs[org_id_str] = OrgSessionEntry(
                             role=assignment.role,
                             org_name=org.name,
-                            permissions=(base | grants) - revokes,
+                            permissions=(
+                                (base | company_role_perms | grants) - revokes
+                            ),
                             verification_status=org.verification_status,
                             created_at=org.created_at,
                         )
