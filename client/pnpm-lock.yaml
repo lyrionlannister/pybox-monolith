@@ -18,8 +18,8 @@ importers:
         specifier: ^6.1.22
         version: 6.1.22(@fullcalendar/core@6.1.22)
       '@fullcalendar/react':
-        specifier: ^6.1.22
-        version: 6.1.22(@fullcalendar/core@6.1.22)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: ^7.1.4
+        version: 7.1.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(temporal-polyfill@1.0.8)
       '@react-oauth/google':
         specifier: ^0.13.5
         version: 0.13.5(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -317,8 +317,19 @@ packages:
       '@noble/hashes':
         optional: true
 
+  '@full-ui/headless-calendar@7.1.4':
+    resolution: {integrity: sha512-b0o9zsbJKpeM+e5eh27paqfDseQgMQkOy4jjp+nCLABmUQWn2kJ+vV3QdSNXL/9R7S+SwN6Ky21p1hDYvDdgUg==}
+    peerDependencies:
+      temporal-polyfill: ^1.0.7
+
   '@fullcalendar/core@6.1.22':
     resolution: {integrity: sha512-ju5PJUE++zr8XXCGtlXlrodF6doUy9BDfzx+VmE0B+XDBM2A5cUi/aU3M1ANfw/StmKhwqew7Ps7bXMiv/JREg==}
+
+  '@fullcalendar/core@7.1.4':
+    resolution: {integrity: sha512-Pkjagkqa4U9n2PemmdjrejmgrbiN6UyeP0pd0qKSjnvPDZzMJGPJvQ00sgm67KL0FAyQSnKMy0odSz9yv6s2XA==}
+    peerDependencies:
+      '@full-ui/headless-calendar': 7.1.4
+      temporal-polyfill: ^1.0.7
 
   '@fullcalendar/daygrid@6.1.22':
     resolution: {integrity: sha512-cpom5+bAvsGG5nX+snsCtpMIyyhAr+QlseD9mhz5Vq7rMBTzx43mSkz6IBvQ3vz5h2idbDmT1cggEn/dzZwt9Q==}
@@ -330,12 +341,12 @@ packages:
     peerDependencies:
       '@fullcalendar/core': ~6.1.22
 
-  '@fullcalendar/react@6.1.22':
-    resolution: {integrity: sha512-H7woM4nhvXjyM4Up2D3iSp5f8o3pRPGkiHRixvxxvIMdSMBxboGTqCI7T/vjnAfz5TCxXdeX5HxmSHeANsa6gg==}
+  '@fullcalendar/react@7.1.4':
+    resolution: {integrity: sha512-2gaRBEnO5sIpH/Abqk9cMp46Ax7e8XeKBL+MPb/NLUvjF3an50rnOB3f71BnW2htcEWPPzk6S0SVrmnH5m5xzg==}
     peerDependencies:
-      '@fullcalendar/core': ~6.1.22
-      react: ^16.7.0 || ^17 || ^18 || ^19
-      react-dom: ^16.7.0 || ^17 || ^18 || ^19
+      react: ^17 || ^18 || ^19
+      react-dom: ^17 || ^18 || ^19
+      temporal-polyfill: ^1.0.7
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -1992,6 +2003,15 @@ packages:
     resolution: {integrity: sha512-uxc/zpqFg6x7C8vOE7lh6Lbda8eEL9zmVm/PLeTPBRhh1xCgdWaQ+J1CUieGpIfm2HdtsUpRv+HshiasBMcc6A==}
     engines: {node: '>=6'}
 
+  temporal-polyfill@1.0.8:
+    resolution: {integrity: sha512-RCCGa0GddT099XG49ijdD0tDf86L8vfuZun1+JyJiO4Y2NP9PACQsG0OnvNPXwVLisdvhr/zqL2nhKQmXXx08A==}
+
+  temporal-spec@1.0.1:
+    resolution: {integrity: sha512-wxVoanmDeavXie1vu2JaQ3WIc3JZnWAOYFBsJyATaVsXsycKYUflGsyBmrRSnoCpZJpwPyr38VpgSUlQ8CbFxg==}
+
+  temporal-utils@1.0.4:
+    resolution: {integrity: sha512-4mAcgbWlaxe+gn23gk8g0iHxCVGVOhKzSCfF5HM3lfvH8BdT+/pBmH/R/E4CrIse+koUgs8ThkPzCLnui6Fi8w==}
+
   tinybench@6.2.2:
     resolution: {integrity: sha512-nIZ2N2dFpjBsg2hgitKu7mA+FvsIJuGJOwysRngmVRRmWgR/UyPjwJj8c/fT/dhm8EkHnF5EOogRf+0Z2qrimA==}
     engines: {node: '>=20.0.0'}
@@ -2006,6 +2026,7 @@ packages:
 
   tldts-core@7.4.20:
     resolution: {integrity: sha512-C630TWXZCZmLq0F2bW4QqwnaaxCQ/svpAqvJwnC4JvgEM5ohhBnGsEzTLSOXcN+xjz+kEaHS5uoWIw2klnqd0A==}
+    deprecated: Partial release, see https://github.com/remusao/tldts/issues/2735. Use >=7.4.22.
 
   tldts@7.4.19:
     resolution: {integrity: sha512-48dH6aSpQnpbzDUc4vIQZ1VjB8tkK+e8c1yx05/SZK+rkssgjEOlxDd/yU8/a4vGYQ9vRgJr9dwMq9TJ0b3X2Q==}
@@ -2410,9 +2431,18 @@ snapshots:
 
   '@exodus/bytes@1.16.0': {}
 
+  '@full-ui/headless-calendar@7.1.4(temporal-polyfill@1.0.8)':
+    dependencies:
+      temporal-polyfill: 1.0.8
+
   '@fullcalendar/core@6.1.22':
     dependencies:
       preact: 10.12.1
+
+  '@fullcalendar/core@7.1.4(@full-ui/headless-calendar@7.1.4(temporal-polyfill@1.0.8))(temporal-polyfill@1.0.8)':
+    dependencies:
+      '@full-ui/headless-calendar': 7.1.4(temporal-polyfill@1.0.8)
+      temporal-polyfill: 1.0.8
 
   '@fullcalendar/daygrid@6.1.22(@fullcalendar/core@6.1.22)':
     dependencies:
@@ -2422,11 +2452,13 @@ snapshots:
     dependencies:
       '@fullcalendar/core': 6.1.22
 
-  '@fullcalendar/react@6.1.22(@fullcalendar/core@6.1.22)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@fullcalendar/react@7.1.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(temporal-polyfill@1.0.8)':
     dependencies:
-      '@fullcalendar/core': 6.1.22
+      '@full-ui/headless-calendar': 7.1.4(temporal-polyfill@1.0.8)
+      '@fullcalendar/core': 7.1.4(@full-ui/headless-calendar@7.1.4(temporal-polyfill@1.0.8))(temporal-polyfill@1.0.8)
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
+      temporal-polyfill: 1.0.8
 
   '@humanfs/core@0.19.2':
     dependencies:
@@ -3859,6 +3891,15 @@ snapshots:
   tailwindcss@4.3.3: {}
 
   tapable@2.3.3: {}
+
+  temporal-polyfill@1.0.8:
+    dependencies:
+      temporal-spec: 1.0.1
+      temporal-utils: 1.0.4
+
+  temporal-spec@1.0.1: {}
+
+  temporal-utils@1.0.4: {}
 
   tinybench@6.2.2: {}
 
